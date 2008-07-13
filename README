@@ -1,0 +1,11 @@
+python-osm
+	original version by Rory McCann (http://blog.technomancy.org/)
+	modified by Christoph Lupprich (http://www.stopbeingcarbon.com)
+	
+== DESCRIPTION
+
+python-osm is a reader for Open Street Map Data (*.osm). It will parse the file and give you access to relations, ways and nodes.
+
+== USAGE
+
+osm = OSMXMLFile("myOsmFile.osm.xml")

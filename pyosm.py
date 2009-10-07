@@ -92,6 +92,13 @@ class OSMXMLFile(object):
         self.ways = self.ways.values()
         self.relations = self.relations.values()
 
+    def statistic(self):
+        """Print a short statistic about the osm object"""
+        print "filename:", self.filename
+        print "  Nodes:     %i" % len(self.nodes)
+        print "  Ways:      %i" % len(self.ways)
+        print "  Relations: %i" % len(self.relations)
+
 
 class OSMXMLFileParser(xml.sax.ContentHandler):
     def __init__(self, containing_obj):
@@ -155,4 +162,8 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             self.curr_relation = None
             
 if __name__ == '__main__':
-    osm = OSMXMLFile("./lucan.osm.xml")
+    import sys
+    for filename in sys.argv[1:]:
+        osm = OSMXMLFile(filename)
+        osm.statistic()
+                         

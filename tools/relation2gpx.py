@@ -85,8 +85,8 @@ if __name__ == '__main__':
         gpx_exp = osm_gpx_exporter(outfile)
         
         for relid in args:
-            osm = urllib.urlretrieve('%s/relation/%s/full' %(API,relid), 'temporary.osm')
-            osmobj = pyosm.OSMXMLFile('temporary.osm')
+            osmfile = urllib.urlopen('%s/relation/%s/full' %(API,relid))
+            osmobj = pyosm.OSMXMLFile(osmfile)
             gpx_exp.append_relations(osmobj.relations.values())
             
         gpx_exp.write()

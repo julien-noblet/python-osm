@@ -88,11 +88,6 @@ class OSMXMLFile(object):
         for relation in self.relations.values():
             relation.members = [self.__get_obj(obj_pl.id, obj_pl.type, obj_pl.role) for obj_pl in relation.members]
 
-        # convert them back to lists
-        self.nodes = self.nodes.values()
-        self.ways = self.ways.values()
-        self.relations = self.relations.values()
-
     def statistic(self):
         """Print a short statistic about the osm object"""
         print "filename:", self.filename

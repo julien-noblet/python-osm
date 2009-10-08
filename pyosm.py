@@ -48,9 +48,10 @@ class Relation(object):
       return "Relation(id=%r, members=%r, tags=%r)" % (self.id, self.members, self.tags)
 
 class NodePlaceHolder(object):
-    def __init__(self, id, type=None):
+    def __init__(self, id, type=None, role=''):
         self.id = id
         self.type = type
+        self.role = role
 
     def __repr__(self):
         return "NodePlaceHolder(id=%r, type=%r)" % (self.id, self.type)
@@ -65,11 +66,11 @@ class OSMXMLFile(object):
         self.__parse()
         #print repr(self.ways)
     
-    def __get_obj(self, id, type):
+    def __get_obj(self, id, type, role):
         if type == "way":
-            return self.ways[id]
+            return (self.ways[id], role)
         elif type == "node":
-            return self.nodes[id]
+            return (self.nodes[id], role)
         else:
             print "Don't know type %r in __get_obj" % (type)
             return None
@@ -85,7 +86,7 @@ class OSMXMLFile(object):
             way.nodes = [self.nodes[node_pl.id] for node_pl in way.nodes]
               
         for relation in self.relations.values():
-            relation.members = [self.__get_obj(obj_pl.id, obj_pl.type) for obj_pl in relation.members]
+            relation.members = [self.__get_obj(obj_pl.id, obj_pl.type, obj_pl.role) for obj_pl in relation.members]
 
         # convert them back to lists
         self.nodes = self.nodes.values()
@@ -140,7 +141,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
             assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
             assert self.curr_relation is not None, "curr_relation is None"
-            self.curr_relation.members.append(NodePlaceHolder(id=attrs['ref'], type=attrs['type']))
+            self.curr_relation.members.append(NodePlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
           
         else:
             print "Don't know element %s" % name

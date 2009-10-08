@@ -42,7 +42,7 @@ class osm_gpx_exporter(object):
         for rel in relations:
             trk = self.gpx_dom.createElement('trk')
             self.gpx_root.appendChild(trk)
-            for m in rel.members:
+            for m, role in rel.members:
                 if type(m) != pyosm.Way:
                     continue
                 trkseg = self.gpx_dom.createElement('trkseg')

@@ -14,6 +14,15 @@ class Node(object):
         else:
             self.tags = {}
 
+    def __cmp__(self, other):
+        cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
+        if cmp_ref:
+            return cmp_ref
+        cmp_name = cmp(self.tags.get('name',''), other.tags.get('name',''))
+        if cmp_name:
+            return cmp_name
+        return cmp(self.id, other.id)
+
     def __repr__(self):
         return "Node(id=%r, lon=%r, lat=%r, tags=%r)" % (self.id, self.lon, self.lat, self.tags)
 
@@ -28,6 +37,15 @@ class Way(object):
             self.tags = tags
         else:
             self.tags = {}
+
+    def __cmp__(self, other):
+        cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
+        if cmp_ref:
+            return cmp_ref
+        cmp_name = cmp(self.tags.get('name',''), other.tags.get('name',''))
+        if cmp_name:
+            return cmp_name
+        return cmp(self.id, other.id)
 
     def __repr__(self):
         return "Way(id=%r, nodes=%r, tags=%r)" % (self.id, self.nodes, self.tags)
@@ -44,6 +62,15 @@ class Relation(object):
       else:
           self.tags = {}
       
+    def __cmp__(self, other):
+        cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
+        if cmp_ref:
+            return cmp_ref
+        cmp_name = cmp(self.tags.get('name',''), other.tags.get('name',''))
+        if cmp_name:
+            return cmp_name
+        return cmp(self.id, other.id)
+
     def __repr__(self):
       return "Relation(id=%r, members=%r, tags=%r)" % (self.id, self.members, self.tags)
 

@@ -98,6 +98,8 @@ class OSMXMLFile(object):
             return (self.ways[id], role)
         elif type == "node":
             return (self.nodes[id], role)
+        elif type == "relation":
+            return (self.relations[id], role)
         else:
             print "Don't know type %r in __get_obj" % (type)
             return None
@@ -131,16 +133,13 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         self.curr_relation = None
 
     def startElement(self, name, attrs):
-        #print "Start of node " + name
         if name == 'node':
             self.curr_node = Node(id=attrs['id'], lon=attrs['lon'], lat=attrs['lat'])
             
         elif name == 'way':
-            #self.containing_obj.ways.append(Way())
             self.curr_way = Way(id=attrs['id'])
             
         elif name == 'tag':
-            #assert not self.curr_node and not self.curr_way, "curr_node (%r) and curr_way (%r) are both non-None" % (self.curr_node, self.curr_way)
             if self.curr_node:
                 self.curr_node.tags[attrs['k']] = attrs['v']
             elif self.curr_way:
@@ -165,13 +164,17 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             assert self.curr_relation is not None, "curr_relation is None"
             self.curr_relation.members.append(NodePlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
           
+        elif name == "osm":
+            pass
+
+        elif name == "bound":
+            pass
+
         else:
             print "Don't know element %s" % name
 
 
     def endElement(self, name):
-        #print "End of node " + name
-        #assert not self.curr_node and not self.curr_way, "curr_node (%r) and curr_way (%r) are both non-None" % (self.curr_node, self.curr_way)
         if name == "node":
             self.containing_obj.nodes[self.curr_node.id] = self.curr_node
             self.curr_node = None
@@ -183,7 +186,9 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         elif name == "relation":
             self.containing_obj.relations[self.curr_relation.id] = self.curr_relation
             self.curr_relation = None
-            
+
+
+#################### MAIN            
 if __name__ == '__main__':
     import sys
     for filename in sys.argv[1:]:

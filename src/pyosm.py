@@ -134,13 +134,13 @@ class OSMXMLFile(object):
         self.osmattrs = {}
         self.__parse()
     
-    def __get_obj(self, id, type, role):
+    def __get_obj(self, id, type):
         if type == "way":
-            return (self.ways[id], role)
+            return self.ways[id]
         elif type == "node":
-            return (self.nodes[id], role)
+            return self.nodes[id]
         elif type == "relation":
-            return (self.relations[id], role)
+            return self.relations[id]
         else:
             print "Don't know type %r in __get_obj" % (type)
             return None
@@ -156,7 +156,7 @@ class OSMXMLFile(object):
             way.nodes = [self.nodes[node_pl.id] for node_pl in way.nodes]
               
         for relation in self.relations.values():
-            relation.members = [self.__get_obj(obj_pl.id, obj_pl.type, obj_pl.role) for obj_pl in relation.members]
+            relation.members = [(self.__get_obj(obj_pl.id, obj_pl.type), obj_pl.role) for obj_pl in relation.members]
 
     def merge(self, osmxmlfile):
         for node in osmxmlfile.nodes.values():
@@ -172,7 +172,7 @@ class OSMXMLFile(object):
               
         for relation in self.relations.values():
             types = {Node: 'node', Way: 'way', Relation: 'relation'}
-            relation.members = [self.__get_obj(obj[0].id, types[type(obj[0])], obj[1]) for obj in relation.members]
+            relation.members = [(self.__get_obj(obj[0].id, types[type(obj[0])]), obj[1]) for obj in relation.members]
         
     def write(self, fileobj):
         handler = xml.sax.saxutils.XMLGenerator(fileobj, 'UTF-8')

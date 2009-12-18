@@ -29,9 +29,11 @@ class Node(object):
             return cmp_name
         return cmp(self.id, other.id)
 
+    def attributes(self):
+        return dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+
     def __repr__(self):
-        attr = dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
-        return "Node(attr=%r, tags=%r)" % (attr, self.tags)
+        return "Node(attr=%r, tags=%r)" % (self.attributes, self.tags)
 
 class Way(object):
     ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version']
@@ -61,9 +63,11 @@ class Way(object):
             return cmp_name
         return cmp(self.id, other.id)
 
+    def attributes(self):
+        return dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+
     def __repr__(self):
-        attr = dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
-        return "Way(attr=%r, nodes=%r, tags=%r)" % (attr, self.nodes, self.tags)
+        return "Way(attr=%r, nodes=%r, tags=%r)" % (self.attributes, self.nodes, self.tags)
 
 class Relation(object):
     ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version']
@@ -93,9 +97,11 @@ class Relation(object):
             return cmp_name
         return cmp(self.id, other.id)
 
+    def attributes(self):
+        return dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+
     def __repr__(self):
-        attr = dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
-        return "Relation(attr=%r, members=%r, tags=%r)" % (attr, self.members, self.tags)
+        return "Relation(attr=%r, members=%r, tags=%r)" % (self.attributes(), self.members, self.tags)
 
 class ObjectPlaceHolder(object):
     def __init__(self, id, type=None, role=''):
@@ -113,7 +119,7 @@ class OSMXMLFile(object):
         self.nodes = {}
         self.ways = {}
         self.relations = {}
-        self.osmtags = {}
+        self.osmattrs = {}
         self.__parse()
     
     def __get_obj(self, id, type, role):
@@ -140,6 +146,54 @@ class OSMXMLFile(object):
         for relation in self.relations.values():
             relation.members = [self.__get_obj(obj_pl.id, obj_pl.type, obj_pl.role) for obj_pl in relation.members]
 
+    def write(self, fileobj):
+        handler = xml.sax.saxutils.XMLGenerator(fileobj, 'UTF-8')
+        handler.startDocument()
+        handler.startElement('osm', self.osmattrs)
+        handler.characters('\n')
+
+        for nodeid in sorted(self.nodes):
+            handler.startElement('node', self.nodes[nodeid].attributes())
+            handler.endElement('node')
+            handler.characters('\n')
+
+        for wayid in sorted(self.ways):
+            way = self.ways[wayid]
+            handler.startElement('way', way.attributes())
+            handler.characters('\n')
+            for node in way.nodes:
+                handler.characters('  ')
+                handler.startElement('nd', {'ref': str(node.id)})
+                handler.endElement('nd')
+                handler.characters('\n')
+            for name, value in way.tags.items():
+                handler.characters('  ')
+                handler.startElement('tag', {'k': str(name), 'v': str(value)})
+                handler.endElement('tag')
+                handler.characters('\n')
+            handler.endElement('way')
+            handler.characters('\n')
+            
+        for relationid in sorted(self.relations):
+            relation = self.relations[relationid]
+            handler.startElement('relation', relation.attributes())
+            for obj, role in relation.members:
+                obj_type = {Node: 'node', Way: 'way', Relation: 'relation'}[type(obj)]
+                handler.characters('  ')
+                handler.startElement('member', {'type': obj_type, 'ref': str(obj.id), 'role': role})
+                handler.endElement('member')
+                handler.characters('\n')
+            for name, value in relation.tags.items():
+                handler.characters('  ')
+                handler.startElement('tag', {'k': str(name), 'v': str(value)})
+                handler.endElement('tag')
+                handler.characters('\n')
+            handler.endElement('relation')
+            handler.characters('\n')
+
+        handler.endElement('osm')
+        handler.endDocument()
+
     def statistic(self):
         """Print a short statistic about the osm object"""
         print "filename:", self.filename
@@ -154,7 +208,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         self.curr_node = None
         self.curr_way = None
         self.curr_relation = None
-        self.curr_osmtags = None
+        self.curr_osmattrs = None
 
     def startElement(self, name, attrs):
         if name == 'node':
@@ -189,7 +243,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             self.curr_relation.members.append(ObjectPlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
           
         elif name == "osm":
-            self.curr_osmtags = attrs
+            self.curr_osmattrs = attrs
 
         elif name == "bound":
             pass
@@ -212,7 +266,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             self.curr_relation = None
 
         elif name == "osm":
-            self.containing_obj.osm_tags = self.curr_osmtags
+            self.containing_obj.osmattrs = self.curr_osmattrs
             self.curr_osmtags = None
 
 

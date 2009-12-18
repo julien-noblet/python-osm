@@ -30,7 +30,11 @@ class Node(object):
         return cmp(self.id, other.id)
 
     def attributes(self):
-        return dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+        d = dict([(k,getattr(self,k)) for k in self.ATTRIBUTES])
+        for k,v in d.items():
+            if type(v) == int:
+                d[k] = str(v)
+        return d
 
     def __repr__(self):
         return "Node(attr=%r, tags=%r)" % (self.attributes, self.tags)
@@ -64,7 +68,11 @@ class Way(object):
         return cmp(self.id, other.id)
 
     def attributes(self):
-        return dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+        d = dict([(k,getattr(self,k)) for k in self.ATTRIBUTES])
+        for k,v in d.items():
+            if type(v) == int:
+                d[k] = str(v)
+        return d
 
     def __repr__(self):
         return "Way(attr=%r, nodes=%r, tags=%r)" % (self.attributes, self.nodes, self.tags)
@@ -98,7 +106,11 @@ class Relation(object):
         return cmp(self.id, other.id)
 
     def attributes(self):
-        return dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+        d = dict([(k,getattr(self,k)) for k in self.ATTRIBUTES])
+        for k,v in d.items():
+            if type(v) == int:
+                d[k] = str(v)
+        return d
 
     def __repr__(self):
         return "Relation(attr=%r, members=%r, tags=%r)" % (self.attributes(), self.members, self.tags)
@@ -146,6 +158,22 @@ class OSMXMLFile(object):
         for relation in self.relations.values():
             relation.members = [self.__get_obj(obj_pl.id, obj_pl.type, obj_pl.role) for obj_pl in relation.members]
 
+    def merge(self, osmxmlfile):
+        for node in osmxmlfile.nodes.values():
+            self.nodes[node.id] = node
+        for way in osmxmlfile.ways.values():
+            self.ways[way.id] = way
+        for relation in osmxmlfile.relations.values():
+            self.relations[relation.id] = relation
+
+        # now fix up all the references
+        for way in self.ways.values():
+            way.nodes = [self.nodes[node.id] for node in way.nodes]
+              
+        for relation in self.relations.values():
+            types = {Node: 'node', Way: 'way', Relation: 'relation'}
+            relation.members = [self.__get_obj(obj[0].id, types[type(obj[0])], obj[1]) for obj in relation.members]
+        
     def write(self, fileobj):
         handler = xml.sax.saxutils.XMLGenerator(fileobj, 'UTF-8')
         handler.startDocument()
@@ -153,7 +181,13 @@ class OSMXMLFile(object):
         handler.characters('\n')
 
         for nodeid in sorted(self.nodes):
-            handler.startElement('node', self.nodes[nodeid].attributes())
+            node = self.nodes[nodeid]
+            handler.startElement('node', node.attributes())
+            for name, value in node.tags.items():
+                handler.characters('  ')
+                handler.startElement('tag', {'k': name, 'v': value})
+                handler.endElement('tag')
+                handler.characters('\n')
             handler.endElement('node')
             handler.characters('\n')
 
@@ -168,7 +202,7 @@ class OSMXMLFile(object):
                 handler.characters('\n')
             for name, value in way.tags.items():
                 handler.characters('  ')
-                handler.startElement('tag', {'k': str(name), 'v': str(value)})
+                handler.startElement('tag', {'k': name, 'v': value})
                 handler.endElement('tag')
                 handler.characters('\n')
             handler.endElement('way')
@@ -185,7 +219,7 @@ class OSMXMLFile(object):
                 handler.characters('\n')
             for name, value in relation.tags.items():
                 handler.characters('  ')
-                handler.startElement('tag', {'k': str(name), 'v': str(value)})
+                handler.startElement('tag', {'k': name, 'v': value})
                 handler.endElement('tag')
                 handler.characters('\n')
             handler.endElement('relation')

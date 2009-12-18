@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/python
 #
 # Original version by Rory McCann (http://blog.technomancy.org/)
 # Modifications by Christoph Lupprich (http://www.stopbeingcarbon.com)
@@ -6,13 +6,19 @@
 import xml.sax
 
 class Node(object):
-    def __init__(self, id=None, lon=None, lat=None, tags=None):
-        self.id = id
-        self.lon, self.lat = lon, lat
-        if tags:
-            self.tags = tags
-        else:
+    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon']
+    def __init__(self, attr, tags=None):
+        self.id = int(attr['id'])
+        self.lon, self.lat = attr['lon'], attr['lat']
+        self.uid = int(attr.get('uid','-1'))
+        self.user = attr.get('user','')
+        self.version = int(attr.get('version','0'))
+        self.timestamp = attr.get('timestamp','')
+        self.visible = attr.get('visible','')
+        if not tags:
             self.tags = {}
+        else:
+            self.tags = tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -24,19 +30,27 @@ class Node(object):
         return cmp(self.id, other.id)
 
     def __repr__(self):
-        return "Node(id=%r, lon=%r, lat=%r, tags=%r)" % (self.id, self.lon, self.lat, self.tags)
+        attr = dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+        return "Node(attr=%r, tags=%r)" % (attr, self.tags)
 
 class Way(object):
-    def __init__(self, id, nodes=None, tags=None):
-        self.id = id
-        if nodes:
-            self.nodes = nodes
-        else:
+    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version']
+    def __init__(self, attr, nodes=None, tags=None):
+        self.id = int(attr['id'])
+        self.uid = int(attr.get('uid','-1'))
+        self.user = attr.get('user','')
+        self.version = int(attr.get('version','0'))
+        self.timestamp = attr.get('timestamp','')
+        self.visible = attr.get('visible','')
+
+        if not nodes:
             self.nodes = []
-        if tags:
-            self.tags = tags
         else:
+            self.nodes = nodes
+        if not tags:
             self.tags = {}
+        else:
+            self.tags = tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -48,19 +62,27 @@ class Way(object):
         return cmp(self.id, other.id)
 
     def __repr__(self):
-        return "Way(id=%r, nodes=%r, tags=%r)" % (self.id, self.nodes, self.tags)
+        attr = dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+        return "Way(attr=%r, nodes=%r, tags=%r)" % (attr, self.nodes, self.tags)
 
 class Relation(object):
-    def __init__(self, id, members=None, tags=None):
-      self.id = id
-      if members:
-          self.members = None
-      else:
-          self.members = []
-      if tags:
-          self.tags = tags
-      else:
-          self.tags = {}
+    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version']
+    def __init__(self, attr, members=None, tags=None):
+        self.id = int(attr['id'])
+        self.uid = int(attr.get('uid','-1'))
+        self.user = attr.get('user','')
+        self.version = int(attr.get('version','0'))
+        self.timestamp = attr.get('timestamp','')
+        self.visible = attr.get('visible','')
+
+        if not members:
+            self.members = []
+        else:
+            self.members = members
+        if not tags:
+            self.tags = {}
+        else:
+            self.tags = tags
       
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -72,11 +94,12 @@ class Relation(object):
         return cmp(self.id, other.id)
 
     def __repr__(self):
-      return "Relation(id=%r, members=%r, tags=%r)" % (self.id, self.members, self.tags)
+        attr = dict([(k,str(getattr(self,k))) for k in self.ATTRIBUTES])
+        return "Relation(attr=%r, members=%r, tags=%r)" % (attr, self.members, self.tags)
 
-class NodePlaceHolder(object):
+class ObjectPlaceHolder(object):
     def __init__(self, id, type=None, role=''):
-        self.id = id
+        self.id = int(id)
         self.type = type
         self.role = role
 
@@ -90,8 +113,8 @@ class OSMXMLFile(object):
         self.nodes = {}
         self.ways = {}
         self.relations = {}
+        self.osmtags = {}
         self.__parse()
-        #print repr(self.ways)
     
     def __get_obj(self, id, type, role):
         if type == "way":
@@ -131,14 +154,21 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         self.curr_node = None
         self.curr_way = None
         self.curr_relation = None
+        self.curr_osmtags = None
 
     def startElement(self, name, attrs):
         if name == 'node':
-            self.curr_node = Node(id=attrs['id'], lon=attrs['lon'], lat=attrs['lat'])
+            self.curr_node = Node(attr=attrs)
             
         elif name == 'way':
-            self.curr_way = Way(id=attrs['id'])
+            self.curr_way = Way(attr=attrs)
             
+        elif name == "relation":
+            assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
+            assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
+            assert self.curr_relation is None, "curr_relation (%r) is non-none" % (self.curr_relation)
+            self.curr_relation = Relation(attr=attrs)
+
         elif name == 'tag':
             if self.curr_node:
                 self.curr_node.tags[attrs['k']] = attrs['v']
@@ -150,22 +180,16 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         elif name == "nd":
             assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
             assert self.curr_way is not None, "curr_way is None"
-            self.curr_way.nodes.append(NodePlaceHolder(id=attrs['ref']))
-            
-        elif name == "relation":
-            assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-            assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
-            assert self.curr_relation is None, "curr_relation (%r) is non-none" % (self.curr_relation)
-            self.curr_relation = Relation(id=attrs['id'])
+            self.curr_way.nodes.append(ObjectPlaceHolder(id=attrs['ref']))
           
         elif name == "member":
             assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
             assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
             assert self.curr_relation is not None, "curr_relation is None"
-            self.curr_relation.members.append(NodePlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
+            self.curr_relation.members.append(ObjectPlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
           
         elif name == "osm":
-            pass
+            self.curr_osmtags = attrs
 
         elif name == "bound":
             pass
@@ -178,7 +202,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         if name == "node":
             self.containing_obj.nodes[self.curr_node.id] = self.curr_node
             self.curr_node = None
-            
+        
         elif name == "way":
             self.containing_obj.ways[self.curr_way.id] = self.curr_way
             self.curr_way = None
@@ -187,6 +211,10 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             self.containing_obj.relations[self.curr_relation.id] = self.curr_relation
             self.curr_relation = None
 
+        elif name == "osm":
+            self.containing_obj.osm_tags = self.curr_osmtags
+            self.curr_osmtags = None
+
 
 #################### MAIN            
 if __name__ == '__main__':
@@ -194,4 +222,3 @@ if __name__ == '__main__':
     for filename in sys.argv[1:]:
         osm = OSMXMLFile(filename)
         osm.statistic()
-                         

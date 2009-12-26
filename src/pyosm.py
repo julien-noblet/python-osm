@@ -121,8 +121,12 @@ class ObjectPlaceHolder(object):
         self.type = type
         self.role = role
 
+        self.tags = {}
+        self.nodes = []
+        self.members =[]
+
     def __repr__(self):
-        return "NodePlaceHolder(id=%r, type=%r)" % (self.id, self.type)
+        return "ObjectPlaceHolder(id=%r, type=%r, role=%r)" % (self.id, self.type, self.role)
 
 class OSMXMLFile(object):
     def __init__(self, filename):
@@ -134,17 +138,28 @@ class OSMXMLFile(object):
         self.osmattrs = {}
         self.__parse()
     
-    def __get_obj(self, id, type):
-        if type == "way":
-            return self.ways[id]
-        elif type == "node":
-            return self.nodes[id]
+    def __get_member(self, id, type):
+        if type == "node":
+            obj = self.nodes.get(id)
+            if not obj:
+                obj = ObjectPlaceHolder(id, type)
+                self.nodes[id] = obj
+        elif type == "way":
+            obj = self.ways.get(id)
+            if not obj:
+                obj = ObjectPlaceHolder(id, type)
+                self.ways[id] = obj
         elif type == "relation":
-            return self.relations[id]
+            obj = self.relations.get(id)
+            if not obj:
+                obj = ObjectPlaceHolder(id, type)
+                self.relations[id] = obj
         else:
             print "Don't know type %r in __get_obj" % (type)
             return None
-    
+
+        return obj
+
     def __parse(self):
         """Parse the given XML file"""
         parser = xml.sax.make_parser()
@@ -153,12 +168,12 @@ class OSMXMLFile(object):
 
         # now fix up all the refereneces
         for way in self.ways.values():
-            way.nodes = [self.nodes[node_pl.id] for node_pl in way.nodes]
+            way.nodes = [self.__get_member(node_pl.id, 'node') for node_pl in way.nodes]
               
         for relation in self.relations.values():
-            relation.members = [(self.__get_obj(obj_pl.id, obj_pl.type), obj_pl.role) for obj_pl in relation.members]
+            relation.members = [(self.__get_member(obj_pl.id, obj_pl.type), obj_pl.role) for obj_pl in relation.members]
 
-    def merge(self, osmxmlfile):
+    def merge(self, osmxmlfile, update=True):
         for node in osmxmlfile.nodes.values():
             self.nodes[node.id] = node
         for way in osmxmlfile.ways.values():
@@ -168,13 +183,22 @@ class OSMXMLFile(object):
 
         # now fix up all the references
         for way in self.ways.values():
-            way.nodes = [self.nodes[node.id] for node in way.nodes]
+            way.nodes = [self.__get_member(node_pl.id, 'node') for node_pl in way.nodes]
               
         for relation in self.relations.values():
             types = {Node: 'node', Way: 'way', Relation: 'relation'}
-            relation.members = [(self.__get_obj(obj[0].id, types[type(obj[0])]), obj[1]) for obj in relation.members]
+            l = relation.members
+            relation.members = []
+            for obj, role in l:
+                t = types.get(type(obj))
+                if not t:
+                    relation.members.append((obj, role))
+                else:
+                    relation.members.append((self.__get_member(obj.id, t), role))
         
     def write(self, fileobj):
+        if type(fileobj) == str:
+            fileobj = open(fileobj, 'wt')
         handler = xml.sax.saxutils.XMLGenerator(fileobj, 'UTF-8')
         handler.startDocument()
         handler.startElement('osm', self.osmattrs)
@@ -182,6 +206,8 @@ class OSMXMLFile(object):
 
         for nodeid in sorted(self.nodes):
             node = self.nodes[nodeid]
+            if type(node) == ObjectPlaceHolder:
+                continue
             handler.startElement('node', node.attributes())
             for name, value in node.tags.items():
                 handler.characters('  ')
@@ -193,6 +219,8 @@ class OSMXMLFile(object):
 
         for wayid in sorted(self.ways):
             way = self.ways[wayid]
+            if type(way) == ObjectPlaceHolder:
+                continue
             handler.startElement('way', way.attributes())
             handler.characters('\n')
             for node in way.nodes:
@@ -210,9 +238,14 @@ class OSMXMLFile(object):
             
         for relationid in sorted(self.relations):
             relation = self.relations[relationid]
+            if type(relation) == ObjectPlaceHolder:
+                continue
             handler.startElement('relation', relation.attributes())
             for obj, role in relation.members:
-                obj_type = {Node: 'node', Way: 'way', Relation: 'relation'}[type(obj)]
+                if type(obj) == ObjectPlaceHolder:
+                    obj_type = obj.type
+                else:
+                    obj_type = {Node: 'node', Way: 'way', Relation: 'relation'}[type(obj)]
                 handler.characters('  ')
                 handler.startElement('member', {'type': obj_type, 'ref': str(obj.id), 'role': role})
                 handler.endElement('member')

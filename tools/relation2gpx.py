@@ -1,16 +1,11 @@
 #!/usr/bin/python
 
-
 import sys, os
 import xml.dom.minidom
 
-REL_DIR= "../src/"       # relation between this script and the BASE_DIR
-BASE_DIR = os.path.join(os.getcwd(),
-                        os.path.dirname(sys.argv[0]),
-                        REL_DIR)
-sys.path.append(BASE_DIR)
+PYOSM_DIR = os.path.join(os.path.dirname(__file__), '../src')
+sys.path.append(PYOSM_DIR)
 import pyosm
-
 
 
 class osm_gpx_exporter(object):

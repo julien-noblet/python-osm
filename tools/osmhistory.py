@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import sys, os
-import math
+import re, math
 import urllib
 import httplib
 
@@ -8,29 +8,47 @@ PYOSM_DIR = os.path.join(os.path.dirname(__file__), '../src')
 sys.path.append(PYOSM_DIR)
 import pyosm
 
+VERSION = "0.0.1"
+
 #################### CONSTANTS
 URL='www.openstreetmap.org'
 API='/api/0.6'
 
 #################### FUNCTIONS
-def elementhistory(objtype, objid, date):
-    if objtype not in ['way', 'relation']:
-        print 'Objecttype "%s" not supportet' % objtype
-        return
+def elementhistory(date, relations, ways, nodes):
+    osmhist = pyosm.OSMXMLFile()
 
-    osmhist = bisect(objtype, objid, date)
+    for relationid in relations:
+        osmrelation = bisect('relation', int(relationid), date)
+        osmhist.merge(osmrelation)
+    ## load recursively all missing relations
+    while True:
+        relations = [ r for r in osmhist.relations.values() if type(r) == pyosm.ObjectPlaceHolder ]
+        if not relations:
+            break
+        for relation in relations:
+            osmrelation = bisect('relation', relation.id, date)
+            osmhist.merge(osmrelation)
     
+    for wayid in ways:
+        osmway = bisect('way', int(wayid), date)
+        osmhist.merge(osmway)
+    ## load missing ways
     for way in osmhist.ways.values():
         if type(way) == pyosm.ObjectPlaceHolder:
             osmway = bisect('way', way.id, date)
             osmhist.merge(osmway)
 
+    for nodeid in nodes:
+        osmnode = bisect('node', int(nodeid), date)
+        osmhist.merge(osmnode)
+    ## load missing nodes
     for node in osmhist.nodes.values():
         if type(node) == pyosm.ObjectPlaceHolder:
             osmnode = bisect('node', node.id, date)
             osmhist.merge(osmnode)
-    
-    osmhist.write('%s_%s_%s.osm' %(objtype, objid, date))
+
+    return osmhist
 
 
 def bisect(objtype, objid, date, maxversion=None ):
@@ -47,8 +65,7 @@ def bisect(objtype, objid, date, maxversion=None ):
 
     conn.request('GET', url)
     ans = conn.getresponse()
-    open('xx.osm', 'wt').write(ans.read())
-    curr_osm = pyosm.OSMXMLFile('xx.osm')
+    curr_osm = pyosm.OSMXMLFile(content=ans.read())
     curr_obj = getobject(curr_osm, objtype, objid)
     newest_version = curr_obj.version
 
@@ -63,8 +80,7 @@ def bisect(objtype, objid, date, maxversion=None ):
         log(' bisect:', url)
         conn.request('GET', url)
         ans = conn.getresponse()
-        open('xx.osm', 'wt').write(ans.read())
-        bysect_osm = pyosm.OSMXMLFile('xx.osm')
+        bysect_osm = pyosm.OSMXMLFile(content=ans.read())
         bysect_obj = getobject(bysect_osm, objtype, objid)
 
         bysect_step = int(bysect_step / 2)
@@ -78,7 +94,7 @@ def bisect(objtype, objid, date, maxversion=None ):
         else:
             bysect_version -= bysect_step
 
-    curr_obj.tags['myold_version'] = str(curr_obj.version)
+    curr_obj.tags['osmhistory:old_version'] = str(curr_obj.version)
     curr_obj.version = newest_version
     
     conn.close()
@@ -100,24 +116,68 @@ def log(s, ss=''):
     if True:
         sys.stdout.write(str(s) + str(ss) + '\n')
 
+
+def usage():
+    print sys.argv[0] + " Version " + VERSION
+    print "  -h, --help: print this help information"
+    print "  -t, --timestamp: date for the history. format: YYYY-MM-DD"
+    print "  -o, --outfile: filename for the output filename"
+    print "  -n, --nodes: comma separated list of node ids"
+    print "  -w, --ways: comma separated list of way ids"
+    print "  -r, --relations: comma separated list of relation ids"
+    print "Examples:"
+    print "  osmhistory.py -t 2009-10-01 -w 13415127,26802382 -o foo.osm"
+    print "  osmhistory.py -t 2009-10-01 --relations=21328 -o rel_21628.osm"
+    sys.exit()
+
 #################### MAIN
-## vorhandenes objekt
-#o = bisect('way', 13415127, '2009-10-28')
-#o.write('xx1.osm')
+if __name__ == '__main__':
+    import getopt
+    
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'ht:o:r:w:n:',
+                                   ['help', 'timestamp=', 'outfile=', 'relations=', 'ways=', 'nodes='])
+    except getopt.GetoptError:
+        usage()
 
-## maxversion object
-#o = bisect('way', 26802382, '2009-04-01')
-#o.write('xx2.osm')
+    ## default values
+    outfile = 'out.osm'
+    nodes = []
+    ways = []
+    relations = []
 
+    for o, a in opts:
+        if o in ['-h', '--help']:
+            usage()
+        elif o in ['-t', '--timestamp']:
+            if re.match('20[0-9]{2}-[0-9]{2}-[0-9]{2}$', a):
+                date = a
+            else:
+                print 'Error: invalid date'
+                usage()
+        elif o in ['-o', '--outfile']:
+            outfile = a
+        elif o in ['-n', '--nodes']:
+            if re.match('[1-9][0-9\,]*[0-9]$', a):
+                nodes = a.split(',')
+            else:
+                print 'Error: invalid nodes list'
+                usage()
+        elif o in ['-w', '--ways']:
+            if re.match('[1-9][0-9,]*[0-9]$', a):
+                ways = a.split(',')
+            else:
+                print 'Error: invalid ways list'
+                usage()
+        elif o in ['-r', '--relations']:
+            if re.match('[1-9][0-9,]*[0-9]$', a):
+                relations = a.split(',')
+            else:
+                print 'Error: invalid relations list'
+                usage()
 
-
-
-#elementhistory('way', 26802382, '2009-11-28')
-#elementhistory('way', 17788500, '2009-06-29')
-elementhistory('relation', 21628, '2009-10-01')
-
-
-
+    osm = elementhistory(date, relations, ways, nodes)
+    osm.write(outfile)
 
 
 

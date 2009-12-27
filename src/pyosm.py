@@ -129,14 +129,19 @@ class ObjectPlaceHolder(object):
         return "ObjectPlaceHolder(id=%r, type=%r, role=%r)" % (self.id, self.type, self.role)
 
 class OSMXMLFile(object):
-    def __init__(self, filename):
+    def __init__(self, filename=None, content=None):
         self.filename = filename
 
         self.nodes = {}
         self.ways = {}
         self.relations = {}
         self.osmattrs = {}
-        self.__parse()
+        if filename:
+            self.__parse()
+        elif content:
+            self.__parse(content)
+        else:
+            self.osmattrs = {'version':'0.6'}
     
     def __get_member(self, id, type):
         if type == "node":
@@ -160,11 +165,13 @@ class OSMXMLFile(object):
 
         return obj
 
-    def __parse(self):
+    def __parse(self, content=None):
         """Parse the given XML file"""
-        parser = xml.sax.make_parser()
-        parser.setContentHandler(OSMXMLFileParser(self))
-        parser.parse(self.filename)
+        handler = OSMXMLFileParser(self)
+        if content:
+            xml.sax.parseString(content, handler)
+        else:
+            xml.sax.parse(self.filename, handler)
 
         # now fix up all the refereneces
         for way in self.ways.values():

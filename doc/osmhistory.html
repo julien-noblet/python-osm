@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>python-osm: osmhistory</title>
+  </head>
+
+  <body>
+    <h2>python-osm: osmhistory</h2>
+
+    <b>osmhistory.py</b> is a tool that can retrieve object data from
+    the OpenStreetMap API at a given timestamp. <p>
+
+    The current OSM API supports the download of the current version
+    of an object (e.g. a relation) with a single API call or over the
+    JOSM remote control.
+
+    <table>
+        <tr>
+          <td bgcolor="#D0D0D0">
+            <pre>http://www.openstreetmap.org/api/0.6/relation/21628/full</pre>
+          </td>
+        </tr>
+    </table> <p>
+
+    OSM-history can do the same but at any given timestamp. Thus you
+    can get OSM-objects from a month ago, one year ago, or just the
+    day before something bad happened with the osm objects.
+
+    <table>
+        <tr>
+          <td bgcolor="#D0D0D0">
+            <pre>./osmhistory.py -r 21628 -t 2009-10-01 -o relation_21628_2009-10-01.osm</pre>
+          </td>
+        </tr>
+    </table> <p>
+
+    The command retrieves the <i>relation 21628</i> at the
+    <i>timestamp 2009-10-01</i> and writes the output to the file
+    <i>relation_21628_2009-10-01.osm</i>. <p>
+
+    In order to do that the script first searches (with a binary
+    search) the matching version of the given OSM object. Then it
+    collects all objects that are referenced by this object. e.g. a
+    relation references other relations, ways and/or nodes. A way
+    references nodes. <p>
+    
+    All that objects are downloaded by the script, too. An example
+    output of the script with the executed API calls looks like this:
+
+    <table>
+        <tr>
+          <td bgcolor="#D0D0D0">
+<pre>bisect:relation21628
+ bisect:/api/0.6/relations?relations=21628
+ bisect:/api/0.6/relation/21628/4
+ bisect:/api/0.6/relation/21628/6
+ bisect:/api/0.6/relation/21628/5
+bisect:way8022736
+ bisect:/api/0.6/ways?ways=8022736
+ bisect:/api/0.6/way/8022736/4
+ bisect:/api/0.6/way/8022736/6
+ bisect:/api/0.6/way/8022736/7
+bisect:way19736185
+ bisect:/api/0.6/ways?ways=19736185
+[....]
+bisect:node59975181
+ bisect:/api/0.6/nodes?nodes=59975181
+bisect:node362803235
+ bisect:/api/0.6/nodes?nodes=362803235
+ bisect:/api/0.6/node/362803235/4
+ bisect:/api/0.6/node/362803235/2
+ bisect:/api/0.6/node/362803235/3
+bisect:node500348455
+ bisect:/api/0.6/nodes?nodes=500348455
+[...]</pre>
+          </td>
+        </tr>
+    </table> <p>
+
+    After retrieving the history, you can compare the current version
+    of the object and the historic version. You can load the two
+    versions into different layers with JOSM.
+
+    <table border="1">
+        <tr>
+          <th >new version in front of the old version </th>
+          <th >old version in front of the current version, zoomed in </th>
+        </tr>
+        <tr>
+          <td ><img src="pictures/osmhistory_josm1.png"> </td>
+          <td ><img src="pictures/osmhistory_josm2.png"> </td>
+          </td>
+        </tr>
+    </table> <p>
+
+    As you can see on the left picture, the route of the relation has
+    been changed. On the right picture, you can see the moved
+    roundabout. <p>
+
+    <h3>Revert the changes (experimental, not much tested)</h3>
+    
+    The historic version of the osm objects are prepared to revert the current osm object versions.
+    To achieve this:
+    <ul>
+      <li> I've set the object version attribute to the version of the current object. </li>
+      <li> I've added an extra tag <b>osmhistory:old_version_date</b> at each modified object.
+      The value of the tag contains the historic version and the date of that version.</li>
+    </ul>
+
+    If you delete that tag, the you get exactly the historic
+    object. JOSM will add an action=modify attribute and the version
+    attribute gets incremented. The reverted object will be uploaded
+    with the next commit. <p>
+
+    <b>Example of the historic osm file:</b>
+    <table>
+        <tr>
+          <td bgcolor="#D0D0D0">
+<pre>&lt;node uid="110263" timestamp="2009-09-18T15:12:19Z" lon="9.5154672" visible="true" version="4" user="werner2101" lat="47.6790064" id="362803252"&gt;
+  &lt;tag k="osmhistory:old_version_date" v="2_2009-10-01"&gt;&lt;/tag&gt;
+&lt;/node&gt;
+&lt;way uid="110263" timestamp="2009-09-18T15:12:22Z" visible="true" version="17" user="werner2101" id="4675294"&gt;
+  &lt;nd ref="29691653"&gt;&lt;/nd&gt;
+  &lt;nd ref="362606768"&gt;&lt;/nd&gt;
+[...]
+  &lt;tag k="maxspeed" v="50"&gt;&lt;/tag&gt;
+  &lt;tag k="ref" v="K 7726"&gt;&lt;/tag&gt;
+  &lt;tag k="highway" v="tertiary"&gt;&lt;/tag&gt;
+  &lt;tag k="osmhistory:old_version_date" v="16_2009-10-01"&gt;&lt;/tag&gt;
+&lt;/way&gt;
+&lt;relation uid="110263" timestamp="2009-09-18T15:12:23Z" visible="true" version="7" user="werner2101" id="21628"&gt;
+  &lt;member ref="4675294" role="" type="way"&gt;&lt;/member&gt;
+  &lt;member ref="8022729" role="" type="way"&gt;&lt;/member&gt;
+  &lt;member ref="8022735" role="" type="way"&gt;&lt;/member&gt;
+[...]
+  &lt;tag k="operator" v="Bodenseekreis"&gt;&lt;/tag&gt;
+  &lt;tag k="type" v="route"&gt;&lt;/tag&gt;
+  &lt;tag k="route" v="road"&gt;&lt;/tag&gt;
+  &lt;tag k="ref" v="K 7726"&gt;&lt;/tag&gt;
+  &lt;tag k="osmhistory:old_version_date" v="5_2009-10-01"&gt;&lt;/tag&gt;
+&lt;/relation&gt;</pre>
+          </td>
+        </tr>
+    </table> <p>
+
+    <h3>Integration into OSM API</h3>
+    
+    The current python implementation of that tool needs lots of api calls. Even if I could download 
+    more than one object of the current objects, the download and the binary search of older objects
+    still produces lots of api calls. I'm not sure how long it would take to download large relations
+    like the boundary of a country.<p>
+
+    If other osm users think that the tool is usefull, it's functionality should be included into
+    the OSM api (which is written using Ruby on Rails).
+
+    <hr>
+    <address><a href="mailto:werner.ho@gmx.de">Werner Hoch</a></address>
+<!-- Created: Tue Dec 29 11:14:53 CET 2009 -->
+<!-- hhmts start -->
+Last modified: Tue Dec 29 12:27:50 CET 2009
+<!-- hhmts end -->
+  </body>
+</html>

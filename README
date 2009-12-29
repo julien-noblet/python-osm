@@ -1,11 +1,25 @@
 python-osm
-	original version by Rory McCann (http://blog.technomancy.org/)
-	modified by Christoph Lupprich (http://www.stopbeingcarbon.com)
+  original version by Rory McCann (http://blog.technomancy.org/)
+  modified by Christoph Lupprich (http://www.stopbeingcarbon.com)
+  modified and extended by Werner Hoch (http://www.h-renrew.de)
 	
 == DESCRIPTION
 
-python-osm is a reader for Open Street Map Data (*.osm). It will parse the file and give you access to relations, ways and nodes.
+python-osm contains tools to read Open Street Map Data (*.osm).
+It is splitted into several python classes:
 
-== USAGE
+src/pyosm.py: 
+base class that contains the datamodel of osm. It parses the osm
+file or data and puts every osm-object into pythonobjects.
 
-osm = OSMXMLFile("myOsmFile.osm.xml")
+src/multipolygon.py:
+analyzes a multipolygon relation and provides a node-in-polygon check.
+This class can export a polygon files for osmosis, too.
+
+tools/relation2gpx.py:
+Exports one or more relations into a gpx file. This tool can be used to
+create gpx tracks for your gps-unit or to create maps with routes.
+
+tools/osmhistory.py:
+With this tool you can get an old versions of osm-objects at a given
+timestamp. (experimental, use with care)

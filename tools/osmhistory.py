@@ -94,7 +94,7 @@ def bisect(objtype, objid, date, maxversion=None ):
         else:
             bysect_version -= bysect_step
 
-    curr_obj.tags['osmhistory:old_version'] = str(curr_obj.version)
+    curr_obj.tags['osmhistory:old_version_date'] = str(curr_obj.version) + '_' + date
     curr_obj.version = newest_version
     
     conn.close()

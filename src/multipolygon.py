@@ -215,7 +215,7 @@ if __name__ == '__main__':
         osmfile = urllib.urlopen('%s/relation/%s/full' %(API,relation))
         osmobj = pyosm.OSMXMLFile(osmfile)
 
-    mp = multipolygon(osmobj.relations[relation])
+    mp = multipolygon(osmobj.relations[int(relation)])
 
     if osmosisfile:
         fd = open(osmosisfile, 'wt')

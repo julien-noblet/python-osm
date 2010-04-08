@@ -5,7 +5,7 @@ import xml.dom.minidom
 
 PYOSM_DIR = os.path.join(os.path.dirname(__file__), '../src')
 sys.path.append(PYOSM_DIR)
-import pyosm
+from osm import pyosm
 
 
 class osm_gpx_exporter(object):

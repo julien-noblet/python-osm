@@ -6,7 +6,7 @@
 import xml.sax
 
 class Node(object):
-    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon']
+    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon', 'changeset']
     def __init__(self, attr, tags=None):
         self.id = int(attr['id'])
         self.lon, self.lat = attr['lon'], attr['lat']
@@ -15,6 +15,7 @@ class Node(object):
         self.version = int(attr.get('version','0'))
         self.timestamp = attr.get('timestamp','')
         self.visible = attr.get('visible','')
+        self.changeset = attr.get('changeset','')
         if not tags:
             self.tags = {}
         else:
@@ -40,7 +41,7 @@ class Node(object):
         return "Node(attr=%r, tags=%r)" % (self.attributes, self.tags)
 
 class Way(object):
-    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version']
+    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset']
     def __init__(self, attr, nodes=None, tags=None):
         self.id = int(attr['id'])
         self.uid = int(attr.get('uid','-1'))
@@ -48,6 +49,7 @@ class Way(object):
         self.version = int(attr.get('version','0'))
         self.timestamp = attr.get('timestamp','')
         self.visible = attr.get('visible','')
+        self.changeset = attr.get('changeset','')
 
         if not nodes:
             self.nodes = []
@@ -78,7 +80,7 @@ class Way(object):
         return "Way(attr=%r, nodes=%r, tags=%r)" % (self.attributes, self.nodes, self.tags)
 
 class Relation(object):
-    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version']
+    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset']
     def __init__(self, attr, members=None, tags=None):
         self.id = int(attr['id'])
         self.uid = int(attr.get('uid','-1'))
@@ -86,6 +88,7 @@ class Relation(object):
         self.version = int(attr.get('version','0'))
         self.timestamp = attr.get('timestamp','')
         self.visible = attr.get('visible','')
+        self.changeset = attr.get('changeset','')
 
         if not members:
             self.members = []
@@ -129,19 +132,24 @@ class ObjectPlaceHolder(object):
         return "ObjectPlaceHolder(id=%r, type=%r, role=%r)" % (self.id, self.type, self.role)
 
 class OSMXMLFile(object):
-    def __init__(self, filename=None, content=None):
+    def __init__(self, filename=None, content=None, options={}):
         self.filename = filename
 
         self.nodes = {}
         self.ways = {}
         self.relations = {}
-        self.osmattrs = {}
+        self.osmattrs = {'version':'0.6'}
+        self.options = {'load_nodes': True,
+                        'load_ways': True,
+                        'load_relations': True,
+                        'load_way_nodes': True,
+                        'load_relation_members': True,
+                        'filterfunc': False}
+        self.options.update(options)
         if filename:
             self.__parse()
         elif content:
             self.__parse(content)
-        else:
-            self.osmattrs = {'version':'0.6'}
     
     def __get_member(self, id, type):
         if type == "node":
@@ -279,6 +287,13 @@ class OSMXMLFile(object):
 class OSMXMLFileParser(xml.sax.ContentHandler):
     def __init__(self, containing_obj):
         self.containing_obj = containing_obj
+        self.load_nodes = containing_obj.options['load_nodes']
+        self.load_ways = containing_obj.options['load_ways']
+        self.load_relations = containing_obj.options['load_relations']
+        self.load_way_nodes = containing_obj.options['load_way_nodes']
+        self.load_relation_members = containing_obj.options['load_relation_members']
+        self.filterfunc = containing_obj.options['filterfunc']
+
         self.curr_node = None
         self.curr_way = None
         self.curr_relation = None
@@ -286,16 +301,19 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
 
     def startElement(self, name, attrs):
         if name == 'node':
-            self.curr_node = Node(attr=attrs)
+            if self.load_nodes:
+                self.curr_node = Node(attr=attrs)
             
         elif name == 'way':
-            self.curr_way = Way(attr=attrs)
+            if self.load_ways:
+                self.curr_way = Way(attr=attrs)
             
         elif name == "relation":
-            assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-            assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
-            assert self.curr_relation is None, "curr_relation (%r) is non-none" % (self.curr_relation)
-            self.curr_relation = Relation(attr=attrs)
+            if self.load_relations:
+                assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
+                assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
+                assert self.curr_relation is None, "curr_relation (%r) is non-none" % (self.curr_relation)
+                self.curr_relation = Relation(attr=attrs)
 
         elif name == 'tag':
             if self.curr_node:
@@ -306,15 +324,17 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
                 self.curr_relation.tags[attrs['k']] = attrs['v']
                 
         elif name == "nd":
-            assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-            assert self.curr_way is not None, "curr_way is None"
-            self.curr_way.nodes.append(ObjectPlaceHolder(id=attrs['ref']))
+            if self.load_way_nodes:
+                assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
+                assert self.curr_way is not None, "curr_way is None"
+                self.curr_way.nodes.append(ObjectPlaceHolder(id=attrs['ref']))
           
         elif name == "member":
-            assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-            assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
-            assert self.curr_relation is not None, "curr_relation is None"
-            self.curr_relation.members.append(ObjectPlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
+            if self.load_relation_members:
+                assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
+                assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
+                assert self.curr_relation is not None, "curr_relation is None"
+                self.curr_relation.members.append(ObjectPlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
           
         elif name == "osm":
             self.curr_osmattrs = attrs
@@ -327,16 +347,32 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
 
 
     def endElement(self, name):
-        if name == "node":
-            self.containing_obj.nodes[self.curr_node.id] = self.curr_node
-            self.curr_node = None
         
+        if name == "node":
+            if self.load_nodes:
+                if self.filterfunc:
+                    if not self.filterfunc(self.curr_node):
+                        self.curr_node = None
+                        return
+                self.containing_obj.nodes[self.curr_node.id] = self.curr_node
+            self.curr_node = None
+ 
         elif name == "way":
-            self.containing_obj.ways[self.curr_way.id] = self.curr_way
+            if self.load_ways:
+                if self.filterfunc:
+                    if not self.filterfunc(self.curr_way):
+                        self.curr_way = None
+                        return
+                self.containing_obj.ways[self.curr_way.id] = self.curr_way
             self.curr_way = None
         
         elif name == "relation":
-            self.containing_obj.relations[self.curr_relation.id] = self.curr_relation
+            if self.load_relations:
+                if self.filterfunc:
+                    if not self.filterfunc(self.curr_relation):
+                        self.curr_relation = None
+                        return
+                self.containing_obj.relations[self.curr_relation.id] = self.curr_relation
             self.curr_relation = None
 
         elif name == "osm":

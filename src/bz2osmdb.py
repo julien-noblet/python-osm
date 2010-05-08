@@ -3,6 +3,8 @@
 import sys, os
 import math, re, exceptions
 import bz2
+import cgi,time
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 
 
@@ -113,11 +115,21 @@ class Bz2OsmDb(object):
             return 'EOF'
         if self.bz2cursor + size >= self.__filesize - 5:
             size = self.__filesize - self.bz2cursor - 5
-        try:
-            self.databuffer += self.bz2dc.decompress(self.__filehandler.read(size))
-        except Exception, e:
-            print e
-            return False
+        datain = self.__filehandler.read(size)
+        while datain:
+            try:
+                self.databuffer += self.bz2dc.decompress(datain)
+            except EOFError, msg:
+                print msg, len(self.bz2dc.unused_data)
+                if len(self.bz2dc.unused_data) > 4:
+                    print "unused head", self.bz2dc.unused_data[:4]
+                datain = self.bz2dc.unused_data
+                self.bz2dc = bz2.BZ2Decompressor()
+                continue
+            except Exception, msg:
+                print msg
+                return False
+            break
         
         self.bz2cursor = self.__filehandler.tell()
         return True
@@ -224,15 +236,96 @@ class Bz2OsmDb(object):
         fout.close()
         print "Bz2OsmDb: relation writing complete"
 
-    def get_objects(self, relations=[], ways=[], nodes=[]):
-        data = []
-        for r in sorted(relations):
-            xx = 1
-        for w in sorted(ways):
-            xx = 1
-        for n in sorted(nodes):
-            xx = 1
-      
+    def get_objects(self, objtype, ids=[]):
+        objids = sorted(ids)
+        datalines = []
+        lastid = objids[0] - 10000
+        for objid in objids:
+            print objtype, objid
+            if objid > lastid + 1000:
+                blk = self.__get_block(objtype, objid)
+                self.__bz2readerinit(blk)
+            lastid = objid
+            while True:
+                line = self.__readline(blk)
+                if re.match('  <%s id="[0-9]*" ' % objtype, line):
+                    lineid = int(line.split('"')[1])
+                    if lineid < objid:
+                        continue
+                    elif lineid == objid:
+                        datalines.append(line)
+                        break
+                    elif lineid > objid:
+                        line = ""
+                        break
+            if line == "":
+                continue
+            if line[-2:] == '/>':
+                continue
+            while True:
+                line = self.__readline(blk)
+                datalines.append(line)
+                if re.match('  </%s>' %objtype, line):
+                    break
+        return '\n'.join(datalines)
+            
+
+class OSMHttpHandler(BaseHTTPRequestHandler):
+
+    def print_help(self):
+        self.send_response(404)
+        self.send_header('Content-type',	'text/html')
+        self.end_headers()
+        self.wfile.write("BZ2 OSM DB<br>")
+        self.wfile.write("valid commands are:<br>")
+        self.wfile.write("  nodes?nodes=id1,id2,...<br>")
+        self.wfile.write("  ways?ways=id1,id2,...<br>")
+        self.wfile.write("  relations?relations=id1,id2,...")
+        return
+
+    def do_GET(self):
+        OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
+                  """\n<osm version="0.6" generator="Osmosis 0.32">"""
+        print self.path
+        osm = self.server.osmdb
+        toks = self.path.split('?')
+        if len(toks) != 2:
+            self.print_help()
+            return
+        else:
+            command = toks[0]
+            kvs = toks[1].split('&')
+            args = dict([kv.split('=',1) for kv in kvs])
+        try:
+            if command == '/nodes':
+                nodes = [int(n) for n in args['nodes'].split(',')]
+                data = osm.get_objects('node', nodes)
+            elif command == '/ways':
+                ways = [int(n) for n in args['ways'].split(',')]
+                data = osm.get_objects('way', ways)
+            elif command == '/relations':
+                relations = [int(n) for n in args['relations'].split(',')]
+                data = osm.get_objects('relation', relations)
+            self.send_response(200)
+            self.send_header('Content-type',	'text/xml')
+            self.end_headers()
+            self.wfile.write(OSMHEAD+'\n')
+            self.wfile.write(data)
+            self.wfile.write('\n</osm>')
+            return
+        except IOError:
+            self.send_error(404,'File Not Found: %s' % self.path)
+
+
+def runserver(port, osmdb):
+    try:
+        server = HTTPServer(('', port), OSMHttpHandler)
+        server.osmdb = osmdb
+        print 'started httpserver...'
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print '^C received, shutting down server'
+        server.socket.close()
 
 def usage():
     xx=1
@@ -242,7 +335,7 @@ if __name__ == '__main__':
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'h',
-                                   ['relations=', 'reversed=', 'help'])
+                                   ['relations=', 'reversed=', 'server=', 'help'])
     except getopt.GetoptError:
         usage()
         sys.exit()
@@ -261,4 +354,9 @@ if __name__ == '__main__':
             osmdb = Bz2OsmDb(args[0])
             osmdb.write_reversed(outfile)
             sys.exit()
+        elif o in ['--server']:
+            port = int(a)
+            osmdb = Bz2OsmDb(args[0])
+            runserver(port, osmdb)
+            
             

@@ -49,6 +49,88 @@ class Bz2Block(object):
             % (self.fileindex, self.first_type, self.first_id, self.valid)
 
 
+class Bz2Reader(object):
+    def __init__(self, filehandler, bz2filehead, bz2filesize, bz2reader='python'):
+        self.__filehandler = filehandler
+        self.__filehead = bz2filehead
+        self.__filesize = bz2filesize
+        self.__reader = bz2reader
+
+    def changeblock(self, bz2block):
+        self.__blk = bz2block
+        self.__bz2dc = bz2.BZ2Decompressor()
+        self.__bz2dc.decompress(self.__filehead)
+        self.__bz2cursor = self.__blk.fileindex
+        self.__databuffer = ""
+        self.__datacursor = 0
+
+    def readbz2(self, size):
+        self.__filehandler.seek(self.__bz2cursor)
+        if self.__bz2cursor == self.__filesize - 5:
+            return 'EOF'
+        if self.__bz2cursor + size >= self.__filesize - 5:
+            size = self.__filesize - self.__bz2cursor - 5
+        datain = self.__filehandler.read(size)
+        while datain:
+            try:
+                self.__databuffer += self.__bz2dc.decompress(datain)
+            except EOFError, msg:
+                print msg, len(self.__bz2dc.unused_data)
+                if len(self.__bz2dc.unused_data) > 4:
+                    print "unused head", self.__bz2dc.unused_data[:4]
+                datain = self.__bz2dc.unused_data
+                self.__bz2dc = bz2.BZ2Decompressor()
+                continue
+            except Exception, msg:
+                print msg
+                return False
+            break
+        
+        self.__bz2cursor = self.__filehandler.tell()
+        return True
+        
+    def read(self, size):
+        while (len(self.__databuffer) - self.__datacursor) < size:
+            res = self.readbz2(size / 20)
+            if res == 'EOF':
+                data = self.__databuffer[self.__datacursor:]
+                self.__databuffer = ""
+                self.__datacusor = 0
+                if data:
+                    return data
+                else:
+                    return False
+            if not res:
+                return False
+
+        data = self.__databuffer[self.datacursor:self.datacursor + size]
+        self.__datacursor += size
+
+        if self.__datacursor > 2*size:
+            self.__databuffer = self.__databuffer[self.__datacursor:]
+            self.__datacursor = 0
+
+        return data
+
+    def readline(self):
+        while True:
+            ind = self.__databuffer.find('\n', self.__datacursor)
+            if ind == -1:
+                res = self.readbz2(10000)
+                if not res:
+                    return False
+            else:
+                line = self.__databuffer[self.__datacursor:ind]
+                self.__datacursor = ind + 1
+                break
+
+        if self.__datacursor > 100000:
+            self.__databuffer = self.__databuffer[self.__datacursor:]
+            self.__datacursor = 0
+        return line
+        
+    
+
 class Bz2OsmDb(object):
     def __init__(self, bz2filename):
         self.bz2filename = bz2filename
@@ -60,6 +142,7 @@ class Bz2OsmDb(object):
         print "file head:", str(self.__bz2_filehead)
 
         self.__create_index()
+        self.__bz2reader = Bz2Reader(self.__filehandler, self.__bz2_filehead, self.__filesize)
 
     def __create_index(self):
         BZ2_COMPRESSED_MAGIC = chr(0x31)+chr(0x41)+chr(0x59)+chr(0x26)+chr(0x53)+chr(0x59)
@@ -89,9 +172,9 @@ class Bz2OsmDb(object):
         if blk.valid:
             return True
 
-        self.__bz2readerinit(blk)
+        self.__bz2reader.changeblock(blk)
         while True:
-            line = self.__readline()
+            line = self.__bz2reader.readline()
             if line == False: ## EOF or Error
                 return False
             else:
@@ -102,77 +185,6 @@ class Bz2OsmDb(object):
                         blk.valid = True
                         return True
 
-    def __bz2readerinit(self, blk):
-        self.bz2dc = bz2.BZ2Decompressor()
-        self.bz2dc.decompress(self.__bz2_filehead)
-        self.bz2cursor = blk.fileindex
-        self.databuffer = ""
-        self.datacursor = 0
-
-    def __readbz2(self, size):
-        self.__filehandler.seek(self.bz2cursor)
-        if self.bz2cursor == self.__filesize - 5:
-            return 'EOF'
-        if self.bz2cursor + size >= self.__filesize - 5:
-            size = self.__filesize - self.bz2cursor - 5
-        datain = self.__filehandler.read(size)
-        while datain:
-            try:
-                self.databuffer += self.bz2dc.decompress(datain)
-            except EOFError, msg:
-                print msg, len(self.bz2dc.unused_data)
-                if len(self.bz2dc.unused_data) > 4:
-                    print "unused head", self.bz2dc.unused_data[:4]
-                datain = self.bz2dc.unused_data
-                self.bz2dc = bz2.BZ2Decompressor()
-                continue
-            except Exception, msg:
-                print msg
-                return False
-            break
-        
-        self.bz2cursor = self.__filehandler.tell()
-        return True
-        
-    def __read(self, size):
-        while (len(self.databuffer) - self.datacursor) < size:
-            res = self.__readbz2(size / 20)
-            if res == 'EOF':
-                data = self.databuffer[self.datacursor:]
-                self.databuffer = ""
-                self.datacusor = 0
-                if data:
-                    return data
-                else:
-                    return False
-            if not res:
-                return False
-
-        data = self.databuffer[self.datacursor:self.datacursor + size]
-        self.datacursor += size
-
-        if self.datacursor > 2*size:
-            self.databuffer = self.databuffer[self.datacursor:]
-            self.datacursor = 0
-
-        return data
-
-    def __readline(self):
-        while True:
-            ind = self.databuffer.find('\n', self.datacursor)
-            if ind == -1:
-                res = self.__readbz2(10000)
-                if not res:
-                    return False
-            else:
-                line = self.databuffer[self.datacursor:ind]
-                self.datacursor = ind + 1
-                break
-
-        if self.datacursor > 100000:
-            self.databuffer = self.databuffer[self.datacursor:]
-            self.datacursor = 0
-        return line
 
     def __get_block(self, objtype, objid):
         sortorder = {'node': 0, 'way': 1, 'relation': 2}
@@ -219,17 +231,17 @@ class Bz2OsmDb(object):
         OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
                   """<osm version="0.6" generator="Osmosis 0.32">"""
         blk = self.__get_block('relation', 0)
-        self.__bz2readerinit(blk)
+        self.__bz2reader.changeblock(blk)
 
         while True:
-            line = self.__readline()
+            line = self.__bz2reader.readline()
             if re.match('  <relation id="[0-9]*" ', line):
                 break
 
         fout = bz2.BZ2File(filename, 'w')
         fout.write(OSMHEAD + '\n' + line + '\n')
         while True:
-            data = self.__read(10000000)
+            data = self.__bz2reader.read(10000000)
             if not data:
                 break
             fout.write(data)
@@ -244,10 +256,10 @@ class Bz2OsmDb(object):
             print objtype, objid
             if objid > lastid + 1000:
                 blk = self.__get_block(objtype, objid)
-                self.__bz2readerinit(blk)
+                self.__bz2reader.changeblock(blk)
             lastid = objid
             while True:
-                line = self.__readline()
+                line = self.__bz2reader.readline()
                 if re.match('  <%s id="[0-9]*" ' % objtype, line):
                     lineid = int(line.split('"')[1])
                     if lineid < objid:
@@ -263,7 +275,7 @@ class Bz2OsmDb(object):
             if line[-2:] == '/>':
                 continue
             while True:
-                line = self.__readline()
+                line = self.__bz2reader.readline()
                 datalines.append(line)
                 if re.match('  </%s>' %objtype, line):
                     break

@@ -91,7 +91,7 @@ class Bz2OsmDb(object):
 
         self.__bz2readerinit(blk)
         while True:
-            line = self.__readline(blk)
+            line = self.__readline()
             if line == False: ## EOF or Error
                 return False
             else:
@@ -134,7 +134,7 @@ class Bz2OsmDb(object):
         self.bz2cursor = self.__filehandler.tell()
         return True
         
-    def __read(self, blk, size):
+    def __read(self, size):
         while (len(self.databuffer) - self.datacursor) < size:
             res = self.__readbz2(size / 20)
             if res == 'EOF':
@@ -157,7 +157,7 @@ class Bz2OsmDb(object):
 
         return data
 
-    def __readline(self, blk):
+    def __readline(self):
         while True:
             ind = self.databuffer.find('\n', self.datacursor)
             if ind == -1:
@@ -222,14 +222,14 @@ class Bz2OsmDb(object):
         self.__bz2readerinit(blk)
 
         while True:
-            line = self.__readline(blk)
+            line = self.__readline()
             if re.match('  <relation id="[0-9]*" ', line):
                 break
 
         fout = bz2.BZ2File(filename, 'w')
         fout.write(OSMHEAD + '\n' + line + '\n')
         while True:
-            data = self.__read(blk, 10000000)
+            data = self.__read(10000000)
             if not data:
                 break
             fout.write(data)
@@ -247,7 +247,7 @@ class Bz2OsmDb(object):
                 self.__bz2readerinit(blk)
             lastid = objid
             while True:
-                line = self.__readline(blk)
+                line = self.__readline()
                 if re.match('  <%s id="[0-9]*" ' % objtype, line):
                     lineid = int(line.split('"')[1])
                     if lineid < objid:
@@ -263,7 +263,7 @@ class Bz2OsmDb(object):
             if line[-2:] == '/>':
                 continue
             while True:
-                line = self.__readline(blk)
+                line = self.__readline()
                 datalines.append(line)
                 if re.match('  </%s>' %objtype, line):
                     break

@@ -103,7 +103,7 @@ class Bz2Reader(object):
             if not res:
                 return False
 
-        data = self.__databuffer[self.datacursor:self.datacursor + size]
+        data = self.__databuffer[self.__datacursor:self.__datacursor + size]
         self.__datacursor += size
 
         if self.__datacursor > 2*size:

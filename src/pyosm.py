@@ -38,7 +38,7 @@ class Node(object):
         return d
 
     def __repr__(self):
-        return "Node(attr=%r, tags=%r)" % (self.attributes, self.tags)
+        return "Node(attr=%r, tags=%r)" % (self.attributes(), self.tags)
 
 class Way(object):
     ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset']
@@ -77,7 +77,7 @@ class Way(object):
         return d
 
     def __repr__(self):
-        return "Way(attr=%r, nodes=%r, tags=%r)" % (self.attributes, self.nodes, self.tags)
+        return "Way(attr=%r, nodes=%r, tags=%r)" % (self.attributes(), self.nodes, self.tags)
 
 class Relation(object):
     ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset']

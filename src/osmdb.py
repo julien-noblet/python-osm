@@ -5,7 +5,37 @@ import math, re, exceptions
 import bz2
 import cgi,time
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from xml.sax import handler, make_parser, parseString
 
+#################### CONSTANTS
+OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
+          """<osm version="0.6" generator="Osmosis 0.32">"""
+OSMTAIL = """</osm>"""
+
+VERSION = "0.0.1"
+
+
+#################### CLASSES
+class SubobjectHandler(handler.ContentHandler):
+    def __init__(self):
+        self.relations = set([])
+        self.nodes = set([])
+        self.ways = set([])
+
+    def startElement(self, obj, attrs):
+        if obj == 'nd':
+            self.nodes.add(int(attrs['ref']))
+            return
+        elif obj == 'member':
+            if attrs['type'] == 'relation':
+                self.relations.add(int(attrs['ref']))
+            elif attrs['type'] == 'way':
+                self.ways.add(int(attrs['ref']))
+            elif attrs['type'] == 'node':
+                self.nodes.add(int(attrs['ref']))
+
+    def endElement(self, obj):
+        pass
 
 
 class Bisect(object):
@@ -60,8 +90,6 @@ class OsmDb(object):
     def __create_index(self):
         CNT = 100000
         self.__index =  [ IndexBlock( i * CNT ) for i in xrange(self.__filesize / CNT - 1 ) ]
-        print len(self.__index)
-        
 
     def __validate(self, blk):
         if blk.valid:
@@ -119,9 +147,8 @@ class OsmDb(object):
                 blocknr = bisect.up()
 
     def write_relations(self, filename):
-        print "Bz2OsmDb: writing relations"
-        OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
-                  """<osm version="0.6" generator="Osmosis 0.32">"""
+        if self.__debug:
+            print "Bz2OsmDb: writing relations"
         blk = self.__get_block('relation', 0)
         self.__filehandler.seek(blk.fileindex)
 
@@ -141,14 +168,59 @@ class OsmDb(object):
                 break
             fout.write(data)
         fout.close()
-        print "Bz2OsmDb: relation writing complete"
+        if self.__debug:
+            print "Bz2OsmDb: relation writing complete"
+
+    def get_objects_recursive(self, objtype, ids=[]):
+        relationids = set([])
+        wayids = set([])
+        nodeids = set([])
+        relationdata, waydata, nodedata = '','',''
+
+        if objtype == 'node':
+            nodids = set(ids)
+        elif objtype == 'way':
+            wayids = set(ids)
+        elif objtype == 'relation':
+            relationids = set(ids)
+        else:
+            return ""
+
+        loaded_relationids = set([])
+        while relationids:
+            r_data = self.get_objects('relation', relationids)
+            relationdata += r_data
+
+            parser = make_parser()
+            osm_handler = SubobjectHandler()
+            parser.setContentHandler(osm_handler)
+            parseString(OSMHEAD + r_data + OSMTAIL, osm_handler)
+            nodeids |= osm_handler.nodes
+            wayids |= osm_handler.ways
+            loaded_relationids |= relationids
+            relationids = osm_handler.relations - loaded_relationids
+            
+        if wayids:
+            waydata = self.get_objects('way', wayids)
+            parser = make_parser()
+            osm_handler = SubobjectHandler()
+            parser.setContentHandler(osm_handler)
+            parseString(OSMHEAD + waydata + OSMTAIL, osm_handler)
+            nodeids |= osm_handler.nodes
+
+        if nodeids:
+            nodedata = self.get_objects('node', nodeids)
+
+        return nodedata + waydata + relationdata
+            
 
     def get_objects(self, objtype, ids=[]):
         objids = sorted(ids)
         datalines = []
         lastid = objids[0] - 10000
         for objid in objids:
-            print objtype, objid
+            if self.__debug:
+                print objtype, objid
             if objid > lastid + 1000:
                 blk = self.__get_block(objtype, objid)
                 self.__filehandler.seek(blk.fileindex)
@@ -164,6 +236,8 @@ class OsmDb(object):
                         break
                     elif lineid > objid:
                         line = ""
+                        print objtype, objid, "not found"
+                        lastid = objid - 10000
                         break
             if line == "":
                 continue
@@ -183,16 +257,17 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
         self.send_response(404)
         self.send_header('Content-type',	'text/html')
         self.end_headers()
-        self.wfile.write("BZ2 OSM DB<br>")
-        self.wfile.write("valid commands are:<br>")
+        self.wfile.write("OSMDB File interface<br>")
+        self.wfile.write("=====================<br><br>")
+        self.wfile.write("valid commands are:<br><br>")
         self.wfile.write("  nodes?nodes=id1,id2,...<br>")
         self.wfile.write("  ways?ways=id1,id2,...<br>")
-        self.wfile.write("  relations?relations=id1,id2,...")
+        self.wfile.write("  relations?relations=id1,id2,...<br>")
+        self.wfile.write("  ways?ways=id1,id2,...&mode=recursive<br>")
+        self.wfile.write("  relations?relations=id1,id2,...&mode=recursive")
         return
 
     def do_GET(self):
-        OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
-                  """\n<osm version="0.6" generator="Osmosis 0.32">"""
         print self.path
         osm = self.server.osmdb
         toks = self.path.split('?')
@@ -209,10 +284,16 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
                 data = osm.get_objects('node', nodes)
             elif command == '/ways':
                 ways = [int(n) for n in args['ways'].split(',')]
-                data = osm.get_objects('way', ways)
+                if args.get('mode','') == 'recursive':
+                    data = osm.get_objects_recursive('way', ways)
+                else:
+                    data = osm.get_objects('way', ways)
             elif command == '/relations':
                 relations = [int(n) for n in args['relations'].split(',')]
-                data = osm.get_objects('relation', relations)
+                if args.get('mode','') == 'recursive':
+                    data = osm.get_objects_recursive('relation', relations)
+                else:
+                    data = osm.get_objects('relation', relations)
             self.send_response(200)
             self.send_header('Content-type',	'text/xml')
             self.end_headers()
@@ -224,6 +305,7 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
             self.send_error(404,'File Not Found: %s' % self.path)
 
 
+################### FUNCTIONS
 def runserver(port, osmdb):
     try:
         server = HTTPServer(('', port), OSMHttpHandler)
@@ -235,20 +317,27 @@ def runserver(port, osmdb):
         server.socket.close()
 
 def usage():
-    xx=1
+    print sys.argv[0] + " Version " + VERSION
+    print "  -h, --help: print this help information"
+    print "  --relations=outfile: split relations from mat: YYYY-MM-DD"
+    print "  --server=port: start a http-Server on Port"
+    print "Examples:"
+    print "  osmdb.py --relations=out.osm.bz2"
+    print "  osmdb.py --relations=out.osm"
+    print "  osmdb.py --server=8888"
+    sys.exit()
 
+
+#################### MAIN
 if __name__ == '__main__':
     import getopt
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'h',
-                                   ['relations=', 'reversed=', 'server=', 'help'])
+                                   ['relations=', 'server=', 'help'])
     except getopt.GetoptError:
         usage()
         sys.exit()
-
-    if not len(args) != 1:
-        usage()
 
     for o, a in opts:
         if o in ['--relations']:
@@ -256,12 +345,10 @@ if __name__ == '__main__':
             osmdb = OsmDb(args[0])
             osmdb.write_relations(outfile)
             sys.exit()
-        elif o in ['--reversed']:
-            outfile = a
-            osmdb = OsmDb(args[0])
-            osmdb.write_reversed(outfile)
-            sys.exit()
         elif o in ['--server']:
             port = int(a)
             osmdb = OsmDb(args[0])
             runserver(port, osmdb)
+        elif o in ['--help']:
+            usage()
+            sys.exit()

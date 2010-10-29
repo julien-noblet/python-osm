@@ -102,7 +102,7 @@ class OsmDb(object):
                 return False
             else:
                 for obj in ['node', 'way', 'relation']:
-                    if re.match('  <%s id="[0-9]*" ' % obj, line):
+                    if re.match('[ \t]*<%s id="[0-9]*" ' % obj, line):
                         blk.first_type = obj
                         blk.first_id = int(line.split('"')[1])
                         blk.valid = True
@@ -154,7 +154,7 @@ class OsmDb(object):
 
         while True:
             line = self.__filehandler.readline()
-            if re.match('  <relation id="[0-9]*" ', line):
+            if re.match('[ \t]*<relation id="[0-9]*" ', line):
                 break
 
         if filename[-4] == '.bz2':
@@ -227,7 +227,7 @@ class OsmDb(object):
             lastid = objid
             while True:
                 line = self.__filehandler.readline()
-                if re.match('  <%s id="[0-9]*" ' % objtype, line):
+                if re.match('[ \t]*<%s id="[0-9]*" ' % objtype, line):
                     lineid = int(line.split('"')[1])
                     if lineid < objid:
                         continue
@@ -246,7 +246,7 @@ class OsmDb(object):
             while True:
                 line = self.__filehandler.readline()
                 datalines.append(line)
-                if re.match('  </%s>' %objtype, line):
+                if re.match('[ \t]*</%s>' %objtype, line):
                     break
         return ''.join(datalines)
             

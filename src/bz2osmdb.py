@@ -179,7 +179,7 @@ class Bz2OsmDb(object):
                 return False
             else:
                 for obj in ['node', 'way', 'relation']:
-                    if re.match('  <%s id="[0-9]*" ' % obj, line):
+                    if re.match('[ \t]*<%s id="[0-9]*" ' % obj, line):
                         blk.first_type = obj
                         blk.first_id = int(line.split('"')[1])
                         blk.valid = True
@@ -235,7 +235,7 @@ class Bz2OsmDb(object):
 
         while True:
             line = self.__bz2reader.readline()
-            if re.match('  <relation id="[0-9]*" ', line):
+            if re.match('[ \t]*<relation id="[0-9]*" ', line):
                 break
 
         fout = bz2.BZ2File(filename, 'w')
@@ -260,7 +260,7 @@ class Bz2OsmDb(object):
             lastid = objid
             while True:
                 line = self.__bz2reader.readline()
-                if re.match('  <%s id="[0-9]*" ' % objtype, line):
+                if re.match('[ \t]*<%s id="[0-9]*" ' % objtype, line):
                     lineid = int(line.split('"')[1])
                     if lineid < objid:
                         continue
@@ -277,7 +277,7 @@ class Bz2OsmDb(object):
             while True:
                 line = self.__bz2reader.readline()
                 datalines.append(line)
-                if re.match('  </%s>' %objtype, line):
+                if re.match('[ \t]*</%s>' %objtype, line):
                     break
         return '\n'.join(datalines)
             

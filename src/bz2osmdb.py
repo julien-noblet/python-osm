@@ -233,12 +233,42 @@ class Bz2OsmDb(object):
         blk = self.__get_block('relation', 0)
         self.__bz2reader.changeblock(blk)
 
+        if filename[-4] == '.bz2':
+            fout = bz2.BZ2File(filename, 'w')
+        else:
+            fout = open(filename, 'w')
+
         while True:
             line = self.__bz2reader.readline()
             if re.match('[ \t]*<relation id="[0-9]*" ', line):
                 break
 
-        fout = bz2.BZ2File(filename, 'w')
+        fout.write(OSMHEAD + '\n' + line + '\n')
+        while True:
+            data = self.__bz2reader.read(10000000)
+            if not data:
+                break
+            fout.write(data)
+        fout.close()
+        print "Bz2OsmDb: relation writing complete"
+
+    def write_ways_relations(self, filename):
+        print "Bz2OsmDb: writing relations"
+        OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
+                  """<osm version="0.6" generator="Osmosis 0.32">"""
+        blk = self.__get_block('way', 0)
+        self.__bz2reader.changeblock(blk)
+
+        if filename[-4] == '.bz2':
+            fout = bz2.BZ2File(filename, 'w')
+        else:
+            fout = open(filename, 'w')
+
+        while True:
+            line = self.__bz2reader.readline()
+            if re.match('[ \t]*<way id="[0-9]*" ', line):
+                break
+
         fout.write(OSMHEAD + '\n' + line + '\n')
         while True:
             data = self.__bz2reader.read(10000000)
@@ -347,7 +377,7 @@ if __name__ == '__main__':
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'h',
-                                   ['relations=', 'reversed=', 'server=', 'help'])
+                                   ['relations=', 'ways_relations=', 'reversed=', 'server=', 'help'])
     except getopt.GetoptError:
         usage()
         sys.exit()
@@ -360,6 +390,11 @@ if __name__ == '__main__':
             outfile = a
             osmdb = Bz2OsmDb(args[0])
             osmdb.write_relations(outfile)
+            sys.exit()
+        elif o in ['--ways_relations']:
+            outfile = a
+            osmdb = Bz2OsmDb(args[0])
+            osmdb.write_ways_relations(outfile)
             sys.exit()
         elif o in ['--reversed']:
             outfile = a

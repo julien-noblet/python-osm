@@ -200,9 +200,9 @@ if __name__ == '__main__':
             infile = a
         elif o in ['-o', '--outfile']:
             outfile = a
-        elif o in ['-r', 'relation']:
+        elif o in ['-r', '--relation']:
             relation = a
-        elif o in ['-m', 'osmosispolygon']:
+        elif o in ['-m', '--osmosispolygon']:
             osmosisfile = a
         
 

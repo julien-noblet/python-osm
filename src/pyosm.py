@@ -4,6 +4,8 @@
 # Modifications by Christoph Lupprich (http://www.stopbeingcarbon.com)
 #
 import xml.sax
+import logging
+log = logging.getLogger("pyosm")
 
 class Node(object):
     ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon', 'changeset']
@@ -168,7 +170,7 @@ class OSMXMLFile(object):
                 obj = ObjectPlaceHolder(id, type)
                 self.relations[id] = obj
         else:
-            print "Don't know type %r in __get_obj" % (type)
+            log.warn("Don't know type %r in __get_obj", type)
             return None
 
         return obj
@@ -278,10 +280,10 @@ class OSMXMLFile(object):
 
     def statistic(self):
         """Print a short statistic about the osm object"""
-        print "filename:", self.filename
-        print "  Nodes:     %i" % len(self.nodes)
-        print "  Ways:      %i" % len(self.ways)
-        print "  Relations: %i" % len(self.relations)
+        log.info("Filename: %s", self.filename)
+        log.info("  Nodes    : %i", len(self.nodes))
+        log.info("  Ways     : %i", len(self.ways))
+        log.info("  Relations: %i", len(self.relations))
 
 
 class OSMXMLFileParser(xml.sax.ContentHandler):
@@ -343,7 +345,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             pass
 
         else:
-            print "Don't know element %s" % name
+            log.warn("Don't know element %s", name)
 
 
     def endElement(self, name):
@@ -382,6 +384,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
 
 #################### MAIN            
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
     import sys
     for filename in sys.argv[1:]:
         osm = OSMXMLFile(filename)

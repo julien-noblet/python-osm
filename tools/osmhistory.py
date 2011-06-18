@@ -8,7 +8,7 @@ PYOSM_DIR = os.path.join(os.path.dirname(__file__), '../src')
 sys.path.append(PYOSM_DIR)
 import pyosm
 
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
 #################### CONSTANTS
 URL='www.openstreetmap.org'
@@ -94,7 +94,8 @@ def bisect(objtype, objid, date, maxversion=None ):
         else:
             bysect_version -= bysect_step
 
-    curr_obj.tags['osmhistory:old_version_date'] = str(curr_obj.version) + '_' + date
+    if newest_version > curr_obj.version:
+        curr_obj.tags['osmhistory:old_version_date'] = str(curr_obj.version) + '_' + date
     curr_obj.version = newest_version
     
     conn.close()

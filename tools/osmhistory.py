@@ -6,7 +6,7 @@ import httplib
 
 PYOSM_DIR = os.path.join(os.path.dirname(__file__), '../src')
 sys.path.append(PYOSM_DIR)
-import pyosm
+from osm import pyosm
 
 VERSION = "0.0.2"
 

@@ -3,16 +3,17 @@ from distutils.core import setup
 
 setup(
     name = "python-osm", 
-    version = "0.0.1", 
+    version = "0.0.2",
     description = "OpenStreetMap library for python ",
     scripts = [
              'tools/osmhistory.py', 
              'tools/relation2gpx.py'
     ], 
-    py_modules = [
-             'osm.pyosm',
-             'osm.multipolygon',
-    ],
-    package_dir = {'osm': 'src'},
+    py_modules = ['osm.pyosm',
+                  'osm.multipolygon',
+                  'osm.osmdb',
+                  'osm.bz2osmdb',
+                  ],
+    package_dir = {'osm': 'src/osm'},
 )
 

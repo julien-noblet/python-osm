@@ -1,0 +1,88 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>python-osm documentation</title>
+  </head>
+
+  <body>
+    <h1>python-osm documentation</h1>
+    python-osm is a set of classes an tools for openstreetmap data and files.
+
+    <h2>src/osm/pyosm</h2>
+    This is the base class that contains the data model of python-osm.
+    It also contains a xml parser to read osm files.
+    <p>
+    When called on commandline with an osm file as argument, the class prints a statistic of the file.
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>werner@linux-g0e5:~/osm/src/python-osm/src/osm> ./pyosm.py Rottweil.osm 
+filename: Rottweil.osm
+  Nodes:     3020
+  Ways:      6
+  Relations: 1</pre>
+        </td></tr>
+    </table>
+
+    <h2>src/osm/multipolygon.py</h2>
+    This class can be used to work with multipolygon relations.
+    Beside the commandline options you can perform node in multipolygon checks.
+        
+    <h3>multipolygon commandline</h3>
+    When called on command line interface you can either check multipolygons for 
+    way gaps or create polygon files for osmosis.
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>usage: multipolygon.py --relation=ID [options]
+load a multipolygon from the OSM-API or from an OSM file
+export osmosis boundary polygon or check the multipolygon for errors
+  -h, --help: print this usage message
+  -i, --infile: osmfile to load
+  -r, --relation: multipolygon relation id
+  -m, --osmosispolygon: outfile for osmosis boundary polygon
+        </td></tr>
+    </table>
+    
+    <h3>multipolygon commandline examples</h3>
+    Load a multipolygon with the OSM api and check it.
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>werner@linux-g0e5:~/osm/src/python-osm/src/osm> ./multipolygon.py -r 1164629
+Multipolygon of Relation 1164629
+  Outer Polygons (1):
+    1: 682 Nodes
+  Inner Polygons (6):
+    1: 40 Nodes
+    2: 21 Nodes
+    3: 21 Nodes
+    4: 39 Nodes
+    5: 7 Nodes
+    6: 11 Nodes
+  Open Outer Ways (0):
+  Open Inner Ways (0):<pre>
+        </td></tr>
+    </table>
+    <p>
+    To export relation with id=62578 as polygon file for osmosis:
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>werner@linux-g0e5:~/osm/src/python-osm/src/osm> ./multipolygon.py -r 62578 -m boundary.poly</pre>
+        </td></tr>
+    </table>
+
+    <h2>src/osm/osmdb.py and bz2osmdb.py</h2>
+    TBD
+
+    <h2>tools/osmhistory.py</h2>
+    see <a href="osmhistory.html">osmhistory</a> for a detailed description.
+
+    <h2>tools/relation2gpx.py</h2>
+    TBD
+
+    <hr>
+    <address><a href="mailto:werner@linux-xl08.site">Werner Hoch</a></address>
+<!-- Created: Sat Dec 17 12:25:09 CET 2011 -->
+<!-- hhmts start -->
+Last modified: Sat Dec 17 12:59:25 CET 2011
+<!-- hhmts end -->
+  </body>
+</html>

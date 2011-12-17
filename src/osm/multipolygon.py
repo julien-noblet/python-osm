@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import sys
 import pyosm
 import numpy
 import matplotlib.nxutils
@@ -12,6 +11,9 @@ class multipolygon(object):
         self.read_relation(self.relation)
 
     def read_relation(self, relation):
+        """
+        read the relation and prepare the multipolygon object.
+        """
         members = self.recursive_members(relation)
 
         inner_ways = []
@@ -32,7 +34,10 @@ class multipolygon(object):
 
 
     def create_polygons(self, ways):
-
+        """
+        sort the osm ways to inner and outer polygon way list.
+        Connect all osm ways that belongs together into single polygon ways.
+        """
         ways = ways + []    ## list copy
         polygons = []
         open_ways = []
@@ -110,7 +115,6 @@ class multipolygon(object):
                     else:
                         sys.stderr.write('node with more than 2 ways %s\n' % (stopnode.id))
                     
-
                 ## no way found to append
                 open_ways.append(poly_nodes)
                 poly_nodes = []
@@ -120,7 +124,10 @@ class multipolygon(object):
 
 
     def recursive_members(self, relation):
-
+        """
+        collect recursively all way/node members of a hirarchical multipolygon relation.
+        returns a list of (obj,role) tuples of all member elements.
+        """
         todo_stack = [relation]
         members = []
         recursive_relations = set()
@@ -142,6 +149,9 @@ class multipolygon(object):
         return members
 
     def inside(self, nodes):
+        """
+        check if the nodes from the nodes list are inside the multipolygon
+        """
         points = self.pointlist(nodes)
         matches = numpy.zeros(len(points))
         for outerpoly in self.outer_polygons:
@@ -153,39 +163,58 @@ class multipolygon(object):
         return matches
 
     def pointlist(self, nodes):
+        """
+        returns a list of (lon/lat) points of a given node list
+        """
         points = []
         for node in nodes:
             points.append((float(node.lon), float(node.lat)))
         return points
 
     def status(self):
+        """
+        print the status of the multipolygon file.
+          * number and list of outer/inner polygons
+          * number and list of unclosed outer and inner polygons
+        """
 
         print 'Multipolygon of Relation %s' % (self.relation.id)
         print '  Outer Polygons (%i):' % len(self.outer_polygons)
         for i, op in enumerate (self.outer_polygons):
-            print '    %d: %d Nodes' %(i, len(op))
+            print '    %d: %d Nodes' %(i+1, len(op))
 
         print '  Inner Polygons (%i):' % len(self.inner_polygons)
         for i, ip in enumerate (self.inner_polygons):
-            print '    %d: %d Nodes' %(i, len(ip))
+            print '    %d: %d Nodes' %(i+1, len(ip))
 
         print '  Open Outer Ways (%i):' % len(self.outer_ways)
         for i, ow in enumerate (self.outer_ways):
-            print '    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i, len(ow), ow[0].id, ow[-1].id)
+            print '    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i+1, len(ow), ow[0].id, ow[-1].id)
 
         print '  Open Inner Ways (%i):' % len(self.inner_ways)
         for i, iw in enumerate (self.inner_ways):
-            print '    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i, len(iw), iw[0].id, iw[-1].id)
+            print '    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i+1, len(iw), iw[0].id, iw[-1].id)
 
 
+def usage():
+    print "usage: multipolygon.py --relation=ID [options]"
+    print "load a multipolygon from the OSM-API or from an OSM file"
+    print "export osmosis boundary polygon or check the multipolygon for errors"
+    print "-h, --help: print this usage message"
+    print "-i, --infile: osmfile to load"
+    print "-r, --relation: multipolygon relation id"
+    print "-m, --osmosispolygon: outfile for osmosis boundary polygon"
+    
+    
 #################### MAIN
 if __name__ == '__main__':
+    import sys
     import getopt
     import urllib
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'r:i:m:',
-                                   ['relation=', 'infile=', 'osmosispolygon'])
+        opts, args = getopt.getopt(sys.argv[1:], 'r:i:m:h',
+                                   ['help', 'relation=', 'infile=', 'osmosispolygon='])
     except getopt.GetoptError:
         usage()
         sys.exit()
@@ -198,22 +227,24 @@ if __name__ == '__main__':
     for o, a in opts:
         if o in ['-i', '--infile']:
             infile = a
-        elif o in ['-o', '--outfile']:
-            outfile = a
         elif o in ['-r', '--relation']:
             relation = a
         elif o in ['-m', '--osmosispolygon']:
             osmosisfile = a
-        
-
+        elif o in ['-h', '--help']:
+            usage()
+            sys.exit()
 
     API='http://www.openstreetmap.org/api/0.6'
 
     if infile:
         osmobj = pyosm.OSMXMLFile(infile)
-    else:
+    elif relation:
         osmfile = urllib.urlopen('%s/relation/%s/full' %(API,relation))
         osmobj = pyosm.OSMXMLFile(osmfile)
+    else:
+        usage()
+        sys.exit()
 
     mp = multipolygon(osmobj.relations[int(relation)])
 
@@ -228,15 +259,16 @@ if __name__ == '__main__':
             fd.write('END\n')
             n += 1
             
-        for op in mp.inner_polygons:
+        for ip in mp.inner_polygons:
             fd.write('xxx\n')
             fd.write('!%i\n' %(n))
-            for node in op:
+            for node in ip:
                 fd.write('\t%f\t%f\n' %(node.lat, node.lon))
             fd.write('END\n')
             n += 1
         fd.write('END\n')
-    
-    mp.status()
+
+    else:
+        mp.status()
 
     

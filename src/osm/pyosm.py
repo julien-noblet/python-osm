@@ -133,46 +133,6 @@ class ObjectPlaceHolder(object):
     def __repr__(self):
         return "ObjectPlaceHolder(id=%r, type=%r, role=%r)" % (self.id, self.type, self.role)
 
-class OSCXMLFile(object):
-    """
-    An object representing an OSM Changes file (.osc)
-
-    Much like OSMXMLFile, but this is for dealing with an OSM changes file,
-    and currently only supports extracting information about the nodes.
-    """
-
-    def __init__(self, filename=None, content=None, options={}):
-        self.filename = filename
-        self.create_nodes = {}
-        self.modify_nodes = {}
-        self.delete_nodes = {}
-        self.osmattrs = {}
-        self.options = {'load_nodes': True,
-                        'filterfunc': False}
-        self.options.update(options)
-        if filename:
-            self.__parse()
-        elif content:
-            self.__parse(content)
-
-    def __parse(self, content=None):
-        """Parse the given XML file"""
-        handler = OSCXMLFileParser(self)
-        if content:
-            xml.sax.parseString(content, handler)
-        else:
-            xml.sax.parse(self.filename, handler)
-
-        # now fix up all the refereneces
-        # or, we would if we cared about ways/relations
-
-    def statistic(self):
-        """Print a short statistic about the osc file object"""
-        log.info("filename      : %s", self.filename)
-        log.info("nodes created : %i", len(self.create_nodes))
-        log.info("nodes modified: %i", len(self.modify_nodes))
-        log.info("nodes deleted : %i", len(self.delete_nodes))
-
 class OSMXMLFile(object):
     def __init__(self, filename=None, content=None, options={}):
         self.filename = filename
@@ -325,66 +285,6 @@ class OSMXMLFile(object):
         log.info("  Ways     : %i", len(self.ways))
         log.info("  Relations: %i", len(self.relations))
 
-class OSCXMLFileParser(xml.sax.ContentHandler):
-    """
-    Handles an OSM changes file, .osc, supplying three lists, of created,
-    modified, and deleted nodes from the changes file.
-
-    Based heavily on OSMXMLFileParser, but currently only supports nodes..
-    """
-    def __init__(self, containing_obj):
-        self.containing_obj = containing_obj
-        self.load_nodes = containing_obj.options['load_nodes']
-
-        self.curr_node = None
-        self.curr_osmattrs = None
-
-    def startElement(self, name, attrs):
-        if name == 'modify':
-            self.mode_modify = True
-        elif name == 'delete':
-            self.mode_delete = True
-        elif name == 'create':
-            self.mode_create = True
-
-        elif name == 'node':
-            if self.load_nodes:
-                self.curr_node = Node(attr=attrs)
-
-        elif name == 'tag':
-            if self.curr_node:
-                self.curr_node.tags[attrs['k']] = attrs['v']
-
-        elif name == "osmChange":
-            self.curr_osmattrs = attrs
-
-        else:
-            log.warn("Unexpected element %s", name)
-
-    def endElement(self, name):
-        if name == 'modify':
-            self.mode_modify = False
-        elif name == 'delete':
-            self.mode_delete = False
-        elif name == 'create':
-            self.mode_create = False
-
-        elif name == "node":
-            if self.load_nodes:
-                if self.mode_modify:
-                    self.containing_obj.modify_nodes[self.curr_node.id] = self.curr_node
-                elif self.mode_delete:
-                    self.containing_obj.delete_nodes[self.curr_node.id] = self.curr_node
-                elif self.mode_create:
-                    self.containing_obj.create_nodes[self.curr_node.id] = self.curr_node
-                else:
-                    log.warn("Finished a node without being in a valid mode?: %s", self.curr_node)
-            self.curr_node = None
-
-        elif name == "osmChange":
-            self.containing_obj.osmattrs = self.curr_osmattrs
-            self.curr_osmtags = None
-
 
 class OSMXMLFileParser(xml.sax.ContentHandler):
     def __init__(self, containing_obj):
@@ -483,17 +383,9 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
 
 
 #################### MAIN            
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
     import sys
     for filename in sys.argv[1:]:
-        ext = filename[-3:]
-        if ext == 'osm':
-            osm = OSMXMLFile(filename)
-            osm.statistic()
-        elif ext == 'osc':
-            osc = OSCXMLFile(filename)
-            osc.statistic()
-        else:
-            log.warn("Unrecognised file extension (.osm or .osc): %s", filename)
+        osm = OSMXMLFile(filename)
+        osm.statistic()

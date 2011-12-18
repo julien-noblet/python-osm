@@ -76,13 +76,35 @@ Multipolygon of Relation 1164629
     see <a href="osmhistory.html">osmhistory</a> for a detailed description.
 
     <h2>tools/relation2gpx.py</h2>
-    TBD
+    A tool to download relations from the OSM API and create gpx files.
+    Each relation becomes a track <i>(trk)</i> and each way a track segment 
+    <i>trkseg</i>.
+    The segments are not ordered.
 
+    <h3>relation2gpx.py commandline</h3>
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>usage: relation2gpx.py [-o GPXFILE] -r relation1,relation2,...
+load relations from the OSM API and create gpx files
+  -h, --help: print this help message
+  -o, --outfile: specify the filename of the gpx file
+  -r, --relations: comma seperated list of relations</pre>
+ </td></tr>
+    </table>
+
+    <h3>relation2gpx.py examples</h3>
+    Get relation 157289 (HW4 hiking route) and write it to default filename out.gpx
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>werner@linux-g0e5:~/osm/src/python-osm/tools> ./relation2gpx.py -r 157289</pre>
+ </td></tr>
+    </table>
+    
     <hr>
     <address><a href="mailto:werner@linux-xl08.site">Werner Hoch</a></address>
 <!-- Created: Sat Dec 17 12:25:09 CET 2011 -->
 <!-- hhmts start -->
-Last modified: Sat Dec 17 12:59:25 CET 2011
+Last modified: Sun Dec 18 09:59:51 CET 2011
 <!-- hhmts end -->
   </body>
 </html>

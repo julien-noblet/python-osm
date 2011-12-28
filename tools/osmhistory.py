@@ -18,35 +18,37 @@ API='/api/0.6'
 def elementhistory(date, relations, ways, nodes):
     osmhist = pyosm.OSMXMLFile()
 
-    for relationid in relations:
-        osmrelation = bisect('relation', int(relationid), date)
-        osmhist.merge(osmrelation)
-    ## load recursively all missing relations
-    while True:
-        relations = [ r for r in osmhist.relations.values() if type(r) == pyosm.ObjectPlaceHolder ]
-        if not relations:
-            break
-        for relation in relations:
-            osmrelation = bisect('relation', relation.id, date)
-            osmhist.merge(osmrelation)
-    
-    for wayid in ways:
-        osmway = bisect('way', int(wayid), date)
-        osmhist.merge(osmway)
-    ## load missing ways
-    for way in osmhist.ways.values():
-        if type(way) == pyosm.ObjectPlaceHolder:
-            osmway = bisect('way', way.id, date)
-            osmhist.merge(osmway)
+    ## working stacks for all object types
+    relation_stack = set([int(r) for r in relations])
+    way_stack = set([int(w) for w in ways])
+    node_stack = set([int(n) for n in nodes])
 
-    for nodeid in nodes:
-        osmnode = bisect('node', int(nodeid), date)
-        osmhist.merge(osmnode)
-    ## load missing nodes
-    for node in osmhist.nodes.values():
-        if type(node) == pyosm.ObjectPlaceHolder:
-            osmnode = bisect('node', node.id, date)
-            osmhist.merge(osmnode)
+    ## load recursively all missing relations
+    while relation_stack:
+        relid = relation_stack.pop()
+        rel = bisect('relation', relid, date)
+        osmhist.merge(rel)
+        for mtype, mid, mrole in rel.relations[relid].member_data:
+            if mtype == 'r':
+                if mid not in osmhist.relations:
+                    relation_stack.add(mid)
+            elif mtype == 'w':
+                way_stack.add(mid)
+            elif mtype == 'n':
+                node_stack.add(mid)
+            else:
+                raise ValueError('Unknown member type: "%r"' % mtype)
+    
+    ## load all ways
+    for wayid in way_stack:
+        way = bisect('way', wayid, date)
+        osmhist.merge(way)
+        node_stack.update(way.ways[wayid].nodeids)
+
+    ## load all nodes
+    for nodeid in node_stack:
+        node = bisect('node', nodeid, date)
+        osmhist.merge(node)
 
     return osmhist
 
@@ -67,12 +69,12 @@ def bisect(objtype, objid, date, maxversion=None ):
     ans = conn.getresponse()
     curr_osm = pyosm.OSMXMLFile(content=ans.read())
     curr_obj = getobject(curr_osm, objtype, objid)
-    newest_version = curr_obj.version
+    newest_version = int(curr_obj.version)
 
     if curr_obj.timestamp < date:
         return curr_osm
 
-    bysect_version = 2**int(math.log(curr_obj.version-1,2))
+    bysect_version = 2**int(math.log(int(curr_obj.version)-1,2))
     bysect_step = bysect_version
     
     while bysect_step:
@@ -94,9 +96,9 @@ def bisect(objtype, objid, date, maxversion=None ):
         else:
             bysect_version -= bysect_step
 
-    if newest_version > curr_obj.version:
-        curr_obj.tags['osmhistory:old_version_date'] = str(curr_obj.version) + '_' + date
-    curr_obj.version = newest_version
+    if newest_version > int(curr_obj.version):
+        curr_obj.tags['osmhistory:old_version_date'] = str(int(curr_obj.version)) + '_' + date
+    curr_obj.version = str(newest_version)
     
     conn.close()
     return curr_osm

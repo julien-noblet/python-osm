@@ -44,8 +44,8 @@ class osm_gpx_exporter(object):
                 trk.appendChild(trkseg)
                 for node in m.nodes:
                     trkpt = self.gpx_dom.createElement('trkpt')
-                    trkpt.setAttribute('lat', node.lat)
-                    trkpt.setAttribute('lon', node.lon)
+                    trkpt.setAttribute('lat', str(node.lat))
+                    trkpt.setAttribute('lon', str(node.lon))
                     trkseg.appendChild(trkpt)
 
     def write(self):

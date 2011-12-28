@@ -4,24 +4,34 @@
 # Modifications by Christoph Lupprich (http://www.stopbeingcarbon.com)
 #
 import xml.sax
+import numpy
 import logging
 log = logging.getLogger("pyosm")
 
+
+#################### CLASSES
 class Node(object):
-    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon', 'changeset']
-    def __init__(self, attr, tags=None):
-        self.id = int(attr['id'])
-        self.lon, self.lat = attr['lon'], attr['lat']
-        self.uid = int(attr.get('uid','-1'))
-        self.user = attr.get('user','')
-        self.version = int(attr.get('version','0'))
-        self.timestamp = attr.get('timestamp','')
-        self.visible = attr.get('visible','')
-        self.changeset = attr.get('changeset','')
-        if not tags:
-            self.tags = {}
+    __slot__ = ['id', 'lat', 'lon','__attrs', '__tags']
+    ATTRIBUTES = set(['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon', 'changeset'])
+
+    def __init__(self, attrs, tags=None, load_tags=True, load_attrs=True):
+        self.id = int(attrs.pop('id'))
+        self.lon = float(attrs.pop('lon'))
+        self.lat = float(attrs.pop('lat'))
+        if load_attrs:
+            self.__attrs = attrs
         else:
-            self.tags = tags
+            self.__attrs = None
+        if load_tags:
+            self.__tags = tags
+        else:
+            self.__tags = None
+
+    def __getattr__(self, name):
+        if name in self.ATTRIBUTES:
+            return self.__attrs[name]
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -33,34 +43,46 @@ class Node(object):
         return cmp(self.id, other.id)
 
     def attributes(self):
-        d = dict([(k,getattr(self,k)) for k in self.ATTRIBUTES])
-        for k,v in d.items():
-            if type(v) == int:
-                d[k] = str(v)
+        d = {'id': repr(self.id),
+             'lat': repr(self.lat),
+             'lon': repr(self.lon)}
+        if self.__attrs:
+            d.update(self.__attrs)
         return d
 
     def __repr__(self):
-        return "Node(attr=%r, tags=%r)" % (self.attributes(), self.tags)
+        return "Node(attrs=%r, tags=%r)" % (self.attributes(), self.__tags)
+
 
 class Way(object):
-    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset']
-    def __init__(self, attr, nodes=None, tags=None):
-        self.id = int(attr['id'])
-        self.uid = int(attr.get('uid','-1'))
-        self.user = attr.get('user','')
-        self.version = int(attr.get('version','0'))
-        self.timestamp = attr.get('timestamp','')
-        self.visible = attr.get('visible','')
-        self.changeset = attr.get('changeset','')
+    __slot__ = ['id', '__attrs','__tags','__nodes', 'osm_parent']
+    ATTRIBUTES = set(['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset'])
 
-        if not nodes:
-            self.nodes = []
+    def __init__(self, attrs, tags=None, nodes=None, osm_parent=None, load_tags=True, load_attrs=True, load_nodes=True):
+        self.id = int(attrs.pop('id'))
+        self.osm_parent = osm_parent
+        if load_nodes:
+            self.__nodes = numpy.asarray(nodes, dtype='int32')
         else:
-            self.nodes = nodes
-        if not tags:
-            self.tags = {}
+            self.__nodes = None
+        if load_attrs:
+            self.__attrs = attrs
         else:
-            self.tags = tags
+            self.__attrs = None
+        if load_tags:
+            self.__tags = tags
+        else:
+            self.__tags = None
+
+    def __getattr__(self, name):
+        if name == 'nodes':
+            return self.osm_parent.get_nodes(self.__nodes)
+        elif name == 'nodeids':
+            return list(self.__nodes)
+        elif name == 'tags':
+            return self.__tags
+        elif name in self.ATTRIBUTES:
+            return self.__attrs[name]
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -72,35 +94,45 @@ class Way(object):
         return cmp(self.id, other.id)
 
     def attributes(self):
-        d = dict([(k,getattr(self,k)) for k in self.ATTRIBUTES])
-        for k,v in d.items():
-            if type(v) == int:
-                d[k] = str(v)
+        d = {'id': repr(self.id)}
+        if self.__attrs:
+            d.update(self.__attrs)
         return d
 
     def __repr__(self):
-        return "Way(attr=%r, nodes=%r, tags=%r)" % (self.attributes(), self.nodes, self.tags)
+        return "Way(attrs=%r, tags=%r, nodes=%r)" % (self.attributes(), self.__tags, list(self.__nodes))
+
 
 class Relation(object):
-    ATTRIBUTES = ['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset']
-    def __init__(self, attr, members=None, tags=None):
-        self.id = int(attr['id'])
-        self.uid = int(attr.get('uid','-1'))
-        self.user = attr.get('user','')
-        self.version = int(attr.get('version','0'))
-        self.timestamp = attr.get('timestamp','')
-        self.visible = attr.get('visible','')
-        self.changeset = attr.get('changeset','')
+    __slot__ = ['id', '__attrs','__tags','__members', 'osm_parent']
+    ATTRIBUTES = set(['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset'])
 
-        if not members:
-            self.members = []
+    def __init__(self, attrs, tags=None, members=None, osm_parent=None, load_tags=True, load_attrs=True, load_members=True):
+        self.id = int(attrs.pop('id'))
+        self.osm_parent = osm_parent
+        if load_members:
+            self.__members = numpy.array(members, dtype=[('type','|S1'),('id','<i4'),('role',numpy.object_)])
         else:
-            self.members = members
-        if not tags:
-            self.tags = {}
+            self.__members = None
+        if load_attrs:
+            self.__attrs = attrs
         else:
-            self.tags = tags
-      
+            self.__attrs = None
+        if load_tags:
+            self.__tags = tags
+        else:
+            self.__tags = None
+
+    def __getattr__(self, name):
+        if name == 'members':
+            return self.osm_parent.get_members(self.__members)
+        elif name == 'member_data':
+            return list(self.__members)
+        elif name == 'tags':
+            return self.__tags
+        elif name in self.ATTRIBUTES:
+            return self.__attrs[name]
+
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
         if cmp_ref:
@@ -111,27 +143,15 @@ class Relation(object):
         return cmp(self.id, other.id)
 
     def attributes(self):
-        d = dict([(k,getattr(self,k)) for k in self.ATTRIBUTES])
-        for k,v in d.items():
-            if type(v) == int:
-                d[k] = str(v)
+        d = {'id': repr(self.id)}
+        if self.__attrs:
+            d.update(self.__attrs)
         return d
 
     def __repr__(self):
-        return "Relation(attr=%r, members=%r, tags=%r)" % (self.attributes(), self.members, self.tags)
+        members = [(a,b,c) for a,b,c in self.__members]
+        return "Relation(attrs=%r, tags=%r, members=%r)" % (self.attributes(), self.__tags, members)
 
-class ObjectPlaceHolder(object):
-    def __init__(self, id, type=None, role=''):
-        self.id = int(id)
-        self.type = type
-        self.role = role
-
-        self.tags = {}
-        self.nodes = []
-        self.members =[]
-
-    def __repr__(self):
-        return "ObjectPlaceHolder(id=%r, type=%r, role=%r)" % (self.id, self.type, self.role)
 
 class OSMXMLFile(object):
     def __init__(self, filename=None, content=None, options={}):
@@ -153,27 +173,20 @@ class OSMXMLFile(object):
         elif content:
             self.__parse(content)
     
-    def __get_member(self, id, type):
-        if type == "node":
-            obj = self.nodes.get(id)
-            if not obj:
-                obj = ObjectPlaceHolder(id, type)
-                self.nodes[id] = obj
-        elif type == "way":
-            obj = self.ways.get(id)
-            if not obj:
-                obj = ObjectPlaceHolder(id, type)
-                self.ways[id] = obj
-        elif type == "relation":
-            obj = self.relations.get(id)
-            if not obj:
-                obj = ObjectPlaceHolder(id, type)
-                self.relations[id] = obj
-        else:
-            log.warn("Don't know type %r in __get_obj", type)
-            return None
+    def get_members(self, members):
+        mlist = []
+        for mtype, mid, mrole in members:
+            if mtype == 'r':
+                obj = self.realtions[mid]
+            elif mtype == 'w':
+                obj = self.ways[mid]
+            else:
+                obj = self.nodes[mid]
+            mlist.append((obj, mrole))
+        return mlist
 
-        return obj
+    def get_nodes(self, nodes):
+        return [ self.nodes[nid] for nid in nodes ]
 
     def __parse(self, content=None):
         """Parse the given XML file"""
@@ -183,36 +196,16 @@ class OSMXMLFile(object):
         else:
             xml.sax.parse(self.filename, handler)
 
-        # now fix up all the refereneces
-        for way in self.ways.values():
-            way.nodes = [self.__get_member(node_pl.id, 'node') for node_pl in way.nodes]
-              
-        for relation in self.relations.values():
-            relation.members = [(self.__get_member(obj_pl.id, obj_pl.type), obj_pl.role) for obj_pl in relation.members]
-
     def merge(self, osmxmlfile, update=True):
-        for node in osmxmlfile.nodes.values():
-            self.nodes[node.id] = node
-        for way in osmxmlfile.ways.values():
-            self.ways[way.id] = way
-        for relation in osmxmlfile.relations.values():
-            self.relations[relation.id] = relation
+        for id, node in osmxmlfile.nodes.items():
+            self.nodes[id] = node
+        for id, way in osmxmlfile.ways.items():
+            way.osm_parent = self
+            self.ways[id] = way
+        for id, relation in osmxmlfile.relations.items():
+            relation.osm_parent = self
+            self.relations[id] = relation
 
-        # now fix up all the references
-        for way in self.ways.values():
-            way.nodes = [self.__get_member(node_pl.id, 'node') for node_pl in way.nodes]
-              
-        for relation in self.relations.values():
-            types = {Node: 'node', Way: 'way', Relation: 'relation'}
-            l = relation.members
-            relation.members = []
-            for obj, role in l:
-                t = types.get(type(obj))
-                if not t:
-                    relation.members.append((obj, role))
-                else:
-                    relation.members.append((self.__get_member(obj.id, t), role))
-        
     def write(self, fileobj):
         if type(fileobj) == str:
             fileobj = open(fileobj, 'wt')
@@ -223,8 +216,6 @@ class OSMXMLFile(object):
 
         for nodeid in sorted(self.nodes):
             node = self.nodes[nodeid]
-            if type(node) == ObjectPlaceHolder:
-                continue
             handler.startElement('node', node.attributes())
             for name, value in node.tags.items():
                 handler.characters('  ')
@@ -236,8 +227,6 @@ class OSMXMLFile(object):
 
         for wayid in sorted(self.ways):
             way = self.ways[wayid]
-            if type(way) == ObjectPlaceHolder:
-                continue
             handler.startElement('way', way.attributes())
             handler.characters('\n')
             for node in way.nodes:
@@ -255,16 +244,11 @@ class OSMXMLFile(object):
             
         for relationid in sorted(self.relations):
             relation = self.relations[relationid]
-            if type(relation) == ObjectPlaceHolder:
-                continue
             handler.startElement('relation', relation.attributes())
-            for obj, role in relation.members:
-                if type(obj) == ObjectPlaceHolder:
-                    obj_type = obj.type
-                else:
-                    obj_type = {Node: 'node', Way: 'way', Relation: 'relation'}[type(obj)]
+            for mtype, mid, mrole in relation.member_data:
+                obj_type = {'n': 'node', 'w': 'way', 'r': 'relation'}[mtype]
                 handler.characters('  ')
-                handler.startElement('member', {'type': obj_type, 'ref': str(obj.id), 'role': role})
+                handler.startElement('member', {'type': obj_type, 'ref': str(mid), 'role': mrole})
                 handler.endElement('member')
                 handler.characters('\n')
             for name, value in relation.tags.items():
@@ -280,10 +264,10 @@ class OSMXMLFile(object):
 
     def statistic(self):
         """Print a short statistic about the osm object"""
-        log.info("Filename: %s", self.filename)
-        log.info("  Nodes    : %i", len(self.nodes))
-        log.info("  Ways     : %i", len(self.ways))
-        log.info("  Relations: %i", len(self.relations))
+        print("Filename: %s" % self.filename)
+        print("  Nodes    : %i" % len(self.nodes))
+        print("  Ways     : %i" % len(self.ways))
+        print("  Relations: %i" % len(self.relations))
 
 
 class OSMXMLFileParser(xml.sax.ContentHandler):
@@ -296,50 +280,33 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         self.load_relation_members = containing_obj.options['load_relation_members']
         self.filterfunc = containing_obj.options['filterfunc']
 
-        self.curr_node = None
-        self.curr_way = None
-        self.curr_relation = None
-        self.curr_osmattrs = None
+        self.obj_attrs = None
+        self.obj_tags = []
+        self.way_nodes = []
+        self.rel_members = []
+        self.osm_attrs = None
 
     def startElement(self, name, attrs):
         if name == 'node':
-            if self.load_nodes:
-                self.curr_node = Node(attr=attrs)
+            self.obj_attrs = dict(attrs)
             
         elif name == 'way':
-            if self.load_ways:
-                self.curr_way = Way(attr=attrs)
+            self.obj_attrs = dict(attrs)
             
         elif name == "relation":
-            if self.load_relations:
-                assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-                assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
-                assert self.curr_relation is None, "curr_relation (%r) is non-none" % (self.curr_relation)
-                self.curr_relation = Relation(attr=attrs)
+            self.obj_attrs = dict(attrs)
 
         elif name == 'tag':
-            if self.curr_node:
-                self.curr_node.tags[attrs['k']] = attrs['v']
-            elif self.curr_way:
-                self.curr_way.tags[attrs['k']] = attrs['v']
-            elif self.curr_relation:
-                self.curr_relation.tags[attrs['k']] = attrs['v']
-                
+            self.obj_tags.append((attrs['k'], attrs['v']))
+            
         elif name == "nd":
-            if self.load_way_nodes:
-                assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-                assert self.curr_way is not None, "curr_way is None"
-                self.curr_way.nodes.append(ObjectPlaceHolder(id=attrs['ref']))
+            self.way_nodes.append(attrs['ref'])
           
         elif name == "member":
-            if self.load_relation_members:
-                assert self.curr_node is None, "curr_node (%r) is non-none" % (self.curr_node)
-                assert self.curr_way is None, "curr_way (%r) is non-none" % (self.curr_way)
-                assert self.curr_relation is not None, "curr_relation is None"
-                self.curr_relation.members.append(ObjectPlaceHolder(id=attrs['ref'], type=attrs['type'], role=attrs['role']))
+            self.rel_members.append((attrs['type'][0],attrs['ref'],attrs['role']))
           
         elif name == "osm":
-            self.curr_osmattrs = attrs
+            self.osm_attrs = dict(attrs)
 
         elif name == "bound":
             pass
@@ -347,45 +314,54 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         else:
             log.warn("Don't know element %s", name)
 
-
     def endElement(self, name):
-        
         if name == "node":
             if self.load_nodes:
+                curr_node = Node(self.obj_attrs, dict(self.obj_tags))
                 if self.filterfunc:
-                    if not self.filterfunc(self.curr_node):
-                        self.curr_node = None
-                        return
-                self.containing_obj.nodes[self.curr_node.id] = self.curr_node
-            self.curr_node = None
+                    if self.filterfunc(curr_node):
+                        self.containing_obj.nodes[curr_node.id] = curr_node
+                else:
+                    self.containing_obj.nodes[curr_node.id] = curr_node
+            self.obj_attrs = None
+            self.obj_tags = []
  
         elif name == "way":
             if self.load_ways:
+                curr_way = Way(self.obj_attrs, dict(self.obj_tags), self.way_nodes, osm_parent=self.containing_obj)
                 if self.filterfunc:
-                    if not self.filterfunc(self.curr_way):
-                        self.curr_way = None
-                        return
-                self.containing_obj.ways[self.curr_way.id] = self.curr_way
-            self.curr_way = None
+                    if self.filterfunc(curr_way):
+                        self.containing_obj.ways[curr_way.id] = curr_way
+                else:
+                    self.containing_obj.ways[curr_way.id] = curr_way
+            self.obj_attrs = None
+            self.obj_tags = []
+            self.way_nodes = []
         
         elif name == "relation":
             if self.load_relations:
+                curr_rel = Relation(self.obj_attrs, dict(self.obj_tags), self.rel_members, osm_parent=self.containing_obj)
                 if self.filterfunc:
-                    if not self.filterfunc(self.curr_relation):
-                        self.curr_relation = None
-                        return
-                self.containing_obj.relations[self.curr_relation.id] = self.curr_relation
-            self.curr_relation = None
+                    if self.filterfunc(self.curr_relation):
+                        self.containing_obj.relations[curr_rel.id] = curr_rel
+                else:
+                    self.containing_obj.relations[curr_rel.id] = curr_rel
+            self.obj_attrs = None
+            self.obj_tags = []
+            self.rel_members = []
 
         elif name == "osm":
-            self.containing_obj.osmattrs = self.curr_osmattrs
+            self.containing_obj.osmattrs = self.osm_attrs
             self.curr_osmtags = None
+
+
+#################### FUNCTIONS
 
 
 #################### MAIN            
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
     import sys
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
     for filename in sys.argv[1:]:
         osm = OSMXMLFile(filename)
         osm.statistic()

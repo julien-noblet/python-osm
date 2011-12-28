@@ -1,0 +1,6 @@
+* pbf-support
+* pbf object generator
+* osmdb: pbf-support
+* object generators for osmdb and bz2osmdb
+
+* relation2gpx: recursive relation support

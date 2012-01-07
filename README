@@ -16,7 +16,7 @@ src/multipolygon.py:
 analyzes a multipolygon relation and provides a node-in-polygon check.
 This class can export a polygon files for osmosis, too.
 
-src/osmdb.py and src/bz2osmdb.py:
+src/osmdb.py:
 offers an api to read osm objects from large or large compressed osm files
 like the planet.
 

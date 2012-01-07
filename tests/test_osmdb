@@ -1,0 +1,74 @@
+#!/bin/sh
+
+#################### bz2osmdb commandlines
+echo TEST1
+echo "TEST1-----------------------" > test_osmdb_out.txt
+../src/osm/osmdb.py --help >> test_osmdb_out.txt
+
+echo TEST2
+echo "TEST2-----------------------" >> test_osmdb_out.txt
+../src/osm/osmdb.py --ways_relations=/dev/stdout ../../../osm_files/romania.osm.bz2| head >>test_osmdb_out.txt
+
+echo TEST3
+echo "TEST3-----------------------" >> test_osmdb_out.txt
+../src/osm/osmdb.py --relations=/dev/stdout ../../../osm_files/romania.osm.bz2| head >>test_osmdb_out.txt
+
+echo TEST4
+echo "TEST4-----------------------" >> test_osmdb_out.txt
+../src/osm/osmdb.py --relations=/dev/stdout ../../../osm_files/romania.osm.bz2| tail >>test_osmdb_out.txt
+
+#################### bz2osmdb server
+PORT=8888
+OSM_FILE=../../../osm_files/germany.osm.bz2
+../src/osm/osmdb.py --server=$PORT $OSM_FILE &
+SERVER_PID=$!
+## wait for server startup
+sleep 60
+
+wget -Obz2osmdb_nodes.xml http://localhost:$PORT/nodes?nodes=437498388,437498385,180721525
+
+wget -Obz2osmdb_ways.xml http://localhost:$PORT/ways?ways=37426524,37426525,32466511
+wget -Obz2osmdb_ways_full.xml http://localhost:$PORT/ways?ways=37426524,37426525,32466511\&mode=full
+
+wget -Obz2osmdb_relation.xml http://localhost:$PORT/relations?relations=167920,131414
+wget -Obz2osmdb_relation_full.xml http://localhost:$PORT/relations?relations=1111111\&mode=full
+wget -Obz2osmdb_relation_recursive.xml http://localhost:$PORT/relations?relations=1111111\&mode=recursive
+
+kill $SERVER_PID
+
+#################### osmdb commandlines
+OSM_FILE=/osm/germany.osm
+
+echo TEST5
+echo TEST5----------------------- >> test_osmdb_out.txt
+../src/osm/osmdb.py --help >> test_osmdb_out.txt
+
+echo TEST5
+echo TEST5----------------------- >> test_osmdb_out.txt
+../src/osm/osmdb.py --ways_relations=/dev/stdout $OSM_FILE | head >>test_osmdb_out.txt
+
+echo TEST6
+echo TEST6----------------------- >> test_osmdb_out.txt
+../src/osm/osmdb.py --relations=/dev/stdout $OSM_FILE | head >>test_osmdb_out.txt
+
+#################### osmdb server
+PORT=8888
+../src/osm/osmdb.py --server=$PORT $OSM_FILE &
+SERVER_PID=$!
+## wait for server startup
+sleep 20
+
+wget -Oosmdb_nodes.xml http://localhost:$PORT/nodes?nodes=437498388,437498385,180721525
+
+wget -Oosmdb_ways.xml http://localhost:$PORT/ways?ways=37426524,37426525,32466511
+wget -Oosmdb_ways_full.xml http://localhost:$PORT/ways?ways=37426524,37426525,32466511\&mode=full
+
+wget -Oosmdb_relation.xml http://localhost:$PORT/relations?relations=167920,131414
+wget -Oosmdb_relation_full.xml http://localhost:$PORT/relations?relations=1111111\&mode=full
+wget -Oosmdb_relation_recursive.xml http://localhost:$PORT/relations?relations=1111111\&mode=recursive
+
+kill $SERVER_PID
+
+
+
+

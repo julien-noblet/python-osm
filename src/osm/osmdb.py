@@ -8,15 +8,19 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from xml.sax import handler, make_parser, parseString
  
 #################### CONSTANTS
-OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
-          """<osm version="0.6" generator="Osmosis 0.32">"""
-OSMTAIL = """</osm>"""
+VERSION = "0.0.2"
 
-VERSION = "0.0.1"
+OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
+          """<osm version="0.6" generator="osmdb 0.0.2">"""
+OSMTAIL = """</osm>"""
 
 
 #################### CLASSES
 class SubobjectHandler(handler.ContentHandler):
+    """
+    simple XML Handler for osm files that extracts nodes (nd) from ways
+    and members from relations
+    """
     def __init__(self):
         self.relations = set([])
         self.nodes = set([])
@@ -39,18 +43,27 @@ class SubobjectHandler(handler.ContentHandler):
 
 
 class Bisect(object):
+    """
+    Helper class for binary search processes.
+    """
     def __init__(self, minindex, maxindex):
         self.min = minindex
         self.max = maxindex
         self.reset()
 
     def reset(self):
+        """
+        Setup the Bisect class or reset it to the starting stage.
+        """
         self.increment = 2**int(math.log(self.max - self.min + 1, 2))
         self.cursor = self.min + self.increment - 1
         self.increment /= 2
         return self.cursor
         
     def up(self):
+        """
+        Move the cursor upwards in binary steps.
+        """
         if not self.increment:
             return None
         self.cursor += self.increment
@@ -60,6 +73,9 @@ class Bisect(object):
         return self.cursor
 
     def down(self):        
+        """
+        Move the cursor downwards in binary steps.
+        """
         if not self.increment:
             return None
         self.cursor -= self.increment
@@ -68,6 +84,10 @@ class Bisect(object):
 
 
 class IndexBlock(object):
+    """
+    Artificial index object to store information about the content
+    of an file index.
+    """
     def __init__(self, fileindex):
         self.fileindex = fileindex
         self.first_type = None
@@ -80,23 +100,38 @@ class IndexBlock(object):
 
 
 class OsmDb(object):
+    """
+    OsmDb offers random access to large osm files that cannot be loaded
+    into memomry with the pyosm class.
+    Basically it creates a file index on the fly and binary search system
+    to find objects in large files really fast.
+    """
     def __init__(self, filename):
         self.filename = filename
-        self.__filesize = os.path.getsize(self.filename)
-        self.__filehandler = open(self.filename, 'rb')
-        self.__create_index()
+        self._index = []
+        
+        self._filesize = os.path.getsize(self.filename)
+        self._filehandler = open(self.filename, 'rb')
+        self._create_index()
 
-    def __create_index(self):
+    def _create_index(self):
+        """
+        Allocate index blocks without validating them.
+        """
         CNT = 100000
-        self.__index =  [ IndexBlock( i * CNT ) for i in xrange(self.__filesize / CNT - 1 ) ]
+        self._index =  [ IndexBlock( i * CNT ) for i in xrange(self._filesize / CNT - 1 ) ]
 
-    def __validate(self, blk):
+    def _validate(self, blk):
+        """
+        Find the first object element in the block and update the block index.
+        Returns False if the block has no object item.
+        """
         if blk.valid:
             return True
 
-        self.__filehandler.seek(blk.fileindex)
+        self._filehandler.seek(blk.fileindex)
         while True:
-            line = self.__filehandler.readline()
+            line = self._filehandler.readline()
             if line == False: ## EOF or Error
                 return False
             else:
@@ -107,16 +142,20 @@ class OsmDb(object):
                         blk.valid = True
                         return True
 
-    def __get_block(self, objtype, objid):
+    def _get_block(self, objtype, objid):
+        """
+        Search the index-block, that contains the given objtype and objid.
+        This performs a binary search through the file.
+        """
         sortorder = {'node': 0, 'way': 1, 'relation': 2}
-        bisect = Bisect(0, len(self.__index)-1)
+        bisect = Bisect(0, len(self._index)-1)
         blocknr = bisect.reset()
         while True:
-            blk = self.__index[blocknr]
-            if not self.__validate(blk):
-                self.__index.pop(blocknr)
+            blk = self._index[blocknr]
+            if not self._validate(blk):
+                self._index.pop(blocknr)
                 log("bad block: %s" % blocknr)
-                bisect = Bisect(0, len(self.__index)-1)
+                bisect = Bisect(0, len(self._index)-1)
                 blocknr = bisect.reset()
                 continue
 
@@ -126,8 +165,8 @@ class OsmDb(object):
                       (sortorder.get(blk.first_type, 100), blk.first_id))
 
             if res < 0:
-                if blocknr != 0 and self.__index[blocknr-1].valid:
-                    blk2 = self.__index[blocknr-1]
+                if blocknr != 0 and self._index[blocknr-1].valid:
+                    blk2 = self._index[blocknr-1]
                     if blk2.valid and ((sortorder[objtype], objid) >= \
                                            (sortorder[blk2.first_type], blk2.first_id)):
                         return blk2
@@ -135,26 +174,34 @@ class OsmDb(object):
             elif res == 0:   ## exact match (rare case)
                 return blk
             else:
-                if blocknr == len(self.__index)-1:
+                if blocknr == len(self._index)-1:
                     return blk
-                blk2 = self.__index[blocknr+1]
+                blk2 = self._index[blocknr+1]
                 if blk2.valid and ((sortorder[objtype], objid) < \
                                        (sortorder[blk2.first_type], blk2.first_id)):
                     return blk
                 blocknr = bisect.up()
 
     def print_index(self):
-        for i,b in enumerate(self.__index):
+        """
+        debug function to print all index items
+        """
+        for i,b in enumerate(self._index):
             print i, str(b)
 
     def write_relations(self, filename):
+        """
+        Write all relations of the osm fileobject to the given filename.
+        If the filename ends with ".bz2", then the relations will be compressed.
+        With filename=/dev/stdout you can get a stream of all realations.
+        """
         log("OsmDb: writing relations")
 
-        blk = self.__get_block('relation', 0)
-        self.__filehandler.seek(blk.fileindex)
+        blk = self._get_block('relation', 0)
+        self._filehandler.seek(blk.fileindex)
 
         while True:
-            line = self.__filehandler.readline()
+            line = self._filehandler.readline()
             if re.match('[ \t]*<relation id="[0-9]*" ', line):
                 break
 
@@ -164,7 +211,7 @@ class OsmDb(object):
             fout = open(filename, 'w')
         fout.write(OSMHEAD + '\n' + line)
         while True:
-            data = self.__filehandler.read(10000000)
+            data = self._filehandler.read(10000000)
             if not data:
                 break
             fout.write(data)
@@ -172,13 +219,18 @@ class OsmDb(object):
         log("OsmDb: writing relations complete")
 
     def write_ways_relations(self, filename):
+        """
+        Write all ways and relations of the osm fileobject to the given filename.
+        If the filename ends with ".bz2", then the relations will be compressed.
+        With filename=/dev/stdout you can get a stream of all realations.
+        """
         log("OsmDb: writing ways and relations")
 
-        blk = self.__get_block('way', 0)
-        self.__filehandler.seek(blk.fileindex)
+        blk = self._get_block('way', 0)
+        self._filehandler.seek(blk.fileindex)
 
         while True:
-            line = self.__filehandler.readline()
+            line = self._filehandler.readline()
             if re.match('[ \t]*<way id="[0-9]*" ', line):
                 break
 
@@ -188,7 +240,7 @@ class OsmDb(object):
             fout = open(filename, 'w')
         fout.write(OSMHEAD + '\n' + line)
         while True:
-            data = self.__filehandler.read(10000000)
+            data = self._filehandler.read(10000000)
             if not data:
                 break
             fout.write(data)
@@ -196,6 +248,13 @@ class OsmDb(object):
         log("OsmDb: writing ways and relations complete")
 
     def get_objects_recursive(self, objtype, ids=[], recursive=False):
+        """
+        Recursively get all osm objects that are listed in the ids.
+        If recursive=False, then you get only the objects that are directly
+        referenced in relations.
+        If recursive=True, then you get all hierarchically referenced
+        from the relations.
+        """
         relationids = set([])
         wayids = set([])
         nodeids = set([])
@@ -218,7 +277,7 @@ class OsmDb(object):
         loaded_relationids = set([])
         while relationids:
             r_data = self.get_objects('relation', relationids)
-            relationdata += r_data
+            relationdata += '\n' + r_data
 
             if not recursions:
                 break
@@ -247,19 +306,22 @@ class OsmDb(object):
 
         return nodedata + waydata + relationdata
             
-
     def get_objects(self, objtype, ids=[]):
+        """
+        get all osm objects listed in ids with the given object type.
+        The object type is one of [relation, way, node].
+        """
         objids = sorted(ids)
         datalines = []
         lastid = objids[0] - 10000
         for objid in objids:
             log(objtype, objid)
             if objid > lastid + 1000:
-                blk = self.__get_block(objtype, objid)
-                self.__filehandler.seek(blk.fileindex)
+                blk = self._get_block(objtype, objid)
+                self._filehandler.seek(blk.fileindex)
             lastid = objid
             while True:
-                line = self.__filehandler.readline()
+                line = self._filehandler.readline()
                 if re.match('[ \t]*<%s id="[0-9]*" ' % objtype, line):
                     lineid = int(line.split('"')[1])
                     if lineid < objid:
@@ -277,20 +339,26 @@ class OsmDb(object):
             if line[-3:] == '/>\n':
                 continue
             while True:
-                line = self.__filehandler.readline()
+                line = self._filehandler.readline()
                 datalines.append(line)
                 if re.match('[ \t]*</%s>' %objtype, line):
                     break
         return ''.join(datalines)
 
+
 class Bz2Reader(object):
-    def __init__(self, filehandler, bz2filehead, bz2filesize, bz2reader='python'):
-        self.__filehandler = filehandler
+    """
+    Helper class to access a bz2-compressed file like an uncompressed file.
+    """
+    def __init__(self, filehandler, bz2filehead, bz2filesize):
+        self._filehandler = filehandler
         self.__filehead = bz2filehead
-        self.__filesize = bz2filesize
-        self.__reader = bz2reader
+        self._filesize = bz2filesize
 
     def changeblock(self, bz2block):
+        """
+        Reset the reader cursor to another block index.
+        """
         self.__blk = bz2block
         self.__bz2dc = bz2.BZ2Decompressor()
         self.__bz2dc.decompress(self.__filehead)
@@ -298,13 +366,17 @@ class Bz2Reader(object):
         self.__databuffer = ""
         self.__datacursor = 0
 
-    def readbz2(self, size):
-        self.__filehandler.seek(self.__bz2cursor)
-        if self.__bz2cursor == self.__filesize - 5:
+    def __readbz2(self, size):
+        """
+        Read data with the given size from the bz2-file.
+        The size is defined in the compressed context of the bz2-file
+        """
+        self._filehandler.seek(self.__bz2cursor)
+        if self.__bz2cursor == self._filesize - 5:
             return 'EOF'
-        if self.__bz2cursor + size >= self.__filesize - 5:
-            size = self.__filesize - self.__bz2cursor - 5
-        datain = self.__filehandler.read(size)
+        if self.__bz2cursor + size >= self._filesize - 5:
+            size = self._filesize - self.__bz2cursor - 5
+        datain = self._filehandler.read(size)
         while datain:
             try:
                 self.__databuffer += self.__bz2dc.decompress(datain)
@@ -320,12 +392,16 @@ class Bz2Reader(object):
                 return False
             break
         
-        self.__bz2cursor = self.__filehandler.tell()
+        self.__bz2cursor = self._filehandler.tell()
         return True
         
     def read(self, size):
+        """
+        Read the given number of bytes from the bz2-file
+        The size is defined in uncompressed bytes.
+        """
         while (len(self.__databuffer) - self.__datacursor) < size:
-            res = self.readbz2(size / 20)
+            res = self.__readbz2(size / 20)
             if res == 'EOF':
                 data = self.__databuffer[self.__datacursor:]
                 self.__databuffer = ""
@@ -347,10 +423,13 @@ class Bz2Reader(object):
         return data
 
     def readline(self):
+        """
+        Read a line from the bz2reader
+        """
         while True:
             ind = self.__databuffer.find('\n', self.__datacursor)
             if ind == -1:
-                res = self.readbz2(10000)
+                res = self.__readbz2(10000)
                 if not res:
                     return False
             else:
@@ -365,23 +444,35 @@ class Bz2Reader(object):
 
 
 class Bz2OsmDb(OsmDb):
+    """
+    Bz2OsmDb offers random access to large bz2 compressed osm files that
+    cannot be loaded into memomry with the pyosm class.
+    Basically it creates a file index on the fly and binary search system
+    to find objects in large files really fast.
+    The API is identical to the OsmDb class.
+    Note: This class cannot access multistream bz2 files
+          see http://bugs.python.org/issue1625 for details
+    """
     def __init__(self, bz2filename):
         self.bz2filename = bz2filename
-        self.__index = []
+        self._index = []
 
-        self.__filesize = os.path.getsize(self.bz2filename)
-        self.__filehandler = open(self.bz2filename, 'rb')
-        self.__bz2_filehead = self.__filehandler.read(4)
-        log("file head:", str(self.__bz2_filehead))
+        self._filesize = os.path.getsize(self.bz2filename)
+        self._filehandler = open(self.bz2filename, 'rb')
+        self._bz2_filehead = self._filehandler.read(4)
+        log("file head:", str(self._bz2_filehead))
 
-        self.__create_index()
-        self.__bz2reader = Bz2Reader(self.__filehandler, self.__bz2_filehead, self.__filesize)
+        self._create_index()
+        self._bz2reader = Bz2Reader(self._filehandler, self._bz2_filehead, self._filesize)
 
-    def __create_index(self):
+    def _create_index(self):
+        """
+        Create an index for the compressed osm file
+        """
         BZ2_COMPRESSED_MAGIC = chr(0x31)+chr(0x41)+chr(0x59)+chr(0x26)+chr(0x53)+chr(0x59)
         READBLOCK_SIZE = 100000000
         log("Bz2OsmDb: creating index")
-        fin = self.__filehandler
+        fin = self._filehandler
         block_nr = 0
         while True:
             cursor = 0
@@ -392,22 +483,25 @@ class Bz2OsmDb(OsmDb):
                 if found == -1:
                     break
                 block = IndexBlock(block_nr * READBLOCK_SIZE + found)
-                self.__index.append(block)
+                self._index.append(block)
                 cursor = found + 2
             block_nr += 1
             if fin.tell() < block_nr * READBLOCK_SIZE:
                 break
 
-        log("Bz2OsmDb: index complete: %d Blocks" % len(self.__index))
+        log("Bz2OsmDb: index complete: %d Blocks" % len(self._index))
 
-
-    def __validate(self, blk):
+    def _validate(self, blk):
+        """
+        Find the first object element in the block and update the block index.
+        Returns False if the block has no object item.
+        """
         if blk.valid:
             return True
 
-        self.__bz2reader.changeblock(blk)
+        self._bz2reader.changeblock(blk)
         while True:
-            line = self.__bz2reader.readline()
+            line = self._bz2reader.readline()
             if line == False: ## EOF or Error
                 return False
             else:
@@ -418,49 +512,17 @@ class Bz2OsmDb(OsmDb):
                         blk.valid = True
                         return True
 
-
-    def __get_block(self, objtype, objid):
-        sortorder = {'node': 0, 'way': 1, 'relation': 2}
-        bisect = Bisect(0, len(self.__index)-1)
-        blocknr = bisect.reset()
-        while True:
-            blk = self.__index[blocknr]
-            if not self.__validate(blk):
-                self.__index.pop(blocknr)
-                log("bad block: %s" % blocknr)
-                bisect = Bisect(0, len(self.__index)-1)
-                blocknr = bisect.reset()
-                continue
-
-            log("bisect Nr=%s, seeking %s=%s" %(blocknr, objtype, objid), str(blk))
-
-            res = cmp((sortorder[objtype], objid), 
-                      (sortorder.get(blk.first_type, 100), blk.first_id))
-
-            if res < 0:
-                if blocknr != 0 and self.__index[blocknr-1].valid:
-                    blk2 = self.__index[blocknr-1]
-                    if blk2.valid and ((sortorder[objtype], objid) >= \
-                                           (sortorder[blk2.first_type], blk2.first_id)):
-                        return blk2
-                blocknr = bisect.down()
-            elif res == 0:   ## exact match (rare case)
-                return blk
-            else:
-                if blocknr == len(self.__index)-1:
-                    return blk
-                blk2 = self.__index[blocknr+1]
-                if blk2.valid and ((sortorder[objtype], objid) < \
-                                       (sortorder[blk2.first_type], blk2.first_id)):
-                    return blk
-                blocknr = bisect.up()
-
     def write_relations(self, filename):
+        """
+        Write all relations of the osm fileobject to the given filename.
+        If the filename ends with ".bz2", then the relations will be compressed.
+        With filename=/dev/stdout you can get a stream of all realations.
+        """
         log("Bz2OsmDb: writing relations")
         OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>\n""" \
                   """<osm version="0.6" generator="Osmosis 0.32">"""
-        blk = self.__get_block('relation', 0)
-        self.__bz2reader.changeblock(blk)
+        blk = self._get_block('relation', 0)
+        self._bz2reader.changeblock(blk)
 
         if filename[-4:] == '.bz2':
             fout = bz2.BZ2File(filename, 'w')
@@ -468,13 +530,13 @@ class Bz2OsmDb(OsmDb):
             fout = open(filename, 'w')
 
         while True:
-            line = self.__bz2reader.readline()
+            line = self._bz2reader.readline()
             if re.match('[ \t]*<relation id="[0-9]*" ', line):
                 break
 
         fout.write(OSMHEAD + '\n' + line + '\n')
         while True:
-            data = self.__bz2reader.read(10000000)
+            data = self._bz2reader.read(10000000)
             if not data:
                 break
             fout.write(data)
@@ -482,11 +544,16 @@ class Bz2OsmDb(OsmDb):
         log("Bz2OsmDb: relation writing complete")
 
     def write_ways_relations(self, filename):
+        """
+        Write all ways and relations of the osm fileobject to the given filename.
+        If the filename ends with ".bz2", then the relations will be compressed.
+        With filename=/dev/stdout you can get a stream of all realations.
+        """
         log("Bz2OsmDb: writing relations")
         OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>\n""" \
                   """<osm version="0.6" generator="Osmosis 0.32">"""
-        blk = self.__get_block('way', 0)
-        self.__bz2reader.changeblock(blk)
+        blk = self._get_block('way', 0)
+        self._bz2reader.changeblock(blk)
 
         if filename[-4:] == '.bz2':
             fout = bz2.BZ2File(filename, 'w')
@@ -494,13 +561,13 @@ class Bz2OsmDb(OsmDb):
             fout = open(filename, 'w')
 
         while True:
-            line = self.__bz2reader.readline()
+            line = self._bz2reader.readline()
             if re.match('[ \t]*<way id="[0-9]*" ', line):
                 break
 
         fout.write(OSMHEAD + '\n' + line + '\n')
         while True:
-            data = self.__bz2reader.read(10000000)
+            data = self._bz2reader.read(10000000)
             if not data:
                 break
             fout.write(data)
@@ -508,17 +575,21 @@ class Bz2OsmDb(OsmDb):
         log("Bz2OsmDb: relation writing complete")
 
     def get_objects(self, objtype, ids=[]):
+        """
+        get all osm objects listed in ids with the given object type.
+        The object type is one of [relation, way, node].
+        """
         objids = sorted(ids)
         datalines = []
         lastid = objids[0] - 10000
         for objid in objids:
             log(objtype, objid)
             if objid > lastid + 1000:
-                blk = self.__get_block(objtype, objid)
-                self.__bz2reader.changeblock(blk)
+                blk = self._get_block(objtype, objid)
+                self._bz2reader.changeblock(blk)
             lastid = objid
             while True:
-                line = self.__bz2reader.readline()
+                line = self._bz2reader.readline()
                 if re.match('[ \t]*<%s id="[0-9]*" ' % objtype, line):
                     lineid = int(line.split('"')[1])
                     if lineid < objid:
@@ -534,7 +605,7 @@ class Bz2OsmDb(OsmDb):
             if line[-2:] == '/>':
                 continue
             while True:
-                line = self.__bz2reader.readline()
+                line = self._bz2reader.readline()
                 datalines.append(line)
                 if re.match('[ \t]*</%s>' %objtype, line):
                     break
@@ -542,7 +613,9 @@ class Bz2OsmDb(OsmDb):
 
 
 class OSMHttpHandler(BaseHTTPRequestHandler):
-
+    """
+    HTTP handler URL commands from the HTTP server.
+    """
     def print_help(self):
         self.send_response(404)
         self.send_header('Content-type',	'text/html')
@@ -600,6 +673,9 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
 
 ################### FUNCTIONS
 def runserver(port, osmdb):
+    """
+    Start the http-server with the given port and osmdb object.
+    """
     try:
         server = HTTPServer(('', port), OSMHttpHandler)
         server.osmdb = osmdb
@@ -610,6 +686,7 @@ def runserver(port, osmdb):
         server.socket.close()
 
 def log(*args):
+    """ simple helper function for debugging"""
     return
     for a in args:
         print a,
@@ -656,7 +733,6 @@ if __name__ == '__main__':
                 usage()
                 sys.exit(-1)
             outfile = a
-            print os.path.splitext(args[0])
             if os.path.splitext(args[0])[1] in ['.bz2','.BZ2']:
                 osmdb = Bz2OsmDb(args[0])
             else:

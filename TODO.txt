@@ -1,3 +1,4 @@
+* osmhistory: version id is wrong: setter method for pyosm
 * pbf-support
 * pbf object generator
 * osmdb: pbf-support

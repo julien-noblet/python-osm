@@ -1,0 +1,79 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>osmdb: API for large OSM files</title>
+  </head>
+
+  <body>
+    <h1>osmdb: API for large OSM files</h1>
+    osmdb.py provides an possibility to extract osm objects from large openstreetmap files. <p>
+    The osmdb modul can be used as CLI program as http server or as python module.
+
+    <h2>command line options</h2>
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>osmdb.py Version 0.0.2
+  -h, --help: print this help information
+  --relations=outfile: split relations from input file
+  --ways_relations=outfile: split ways and relations from input file
+  --server=port: start a http-server with the given port
+Examples:
+  osmdb.py --relations=out.osm.bz2 germany.osm.bz2
+  osmdb.py --ways_relations=/dev/stdout planet-latest.osm
+  osmdb.py --server=8888 germany.osm</pre>
+ </td></tr>
+    </table>
+    The commandlines can be used to strip of the relations or the ways and realtions from a large
+    osm or osm.bz2 file. <br>
+    This is usefull if you only need the relations of an osm file.
+
+    <h2>http server api</h2>
+    After starting an http server with the following commandline ...
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>werner@linux-g0e5:~/osm/src/python-osm/src/osm> ./osmdb.py --server=8888 germany.osm</pre>
+ </td></tr>
+    </table>
+    ... you can access the osm file with http requests.
+    <p>
+    Here's a list of all possible commands:
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>  nodes?nodes=id1,id2,...
+  ways?ways=id1,id2,...
+  relations?relations=id1,id2,...
+  ways?ways=id1,id2,...&mode=full
+  relations?relations=id1,id2,...&mode=full
+  relations?relations=id1,id2,...&mode=recursive</pre>
+ </td></tr>
+    </table>
+    <p>
+    
+    To create http requests you can use the command line tool <b>wget</b> or any
+    programming language you like. <br>
+    Here are some examples with wget:
+
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>wget -Oosmdb_nodes.xml http://localhost:8888/nodes?nodes=437498388,437498385,180721525
+
+wget -Oosmdb_ways.xml http://localhost:8888/ways?ways=37426524,37426525,32466511
+wget -Oosmdb_ways_full.xml http://localhost:8888/ways?ways=37426524,37426525,32466511\&mode=full
+
+wget -Oosmdb_relation.xml http://localhost:8888/relations?relations=167920,131414
+wget -Oosmdb_relation_full.xml http://localhost:8888/relations?relations=1111111\&mode=full
+wget -Oosmdb_relation_recursive.xml http://localhost:8888/relations?relations=1111111\&mode=recursive</pre>
+	</td></tr>
+    </table>
+
+    BTW: The relation 11111111 is the german boundary and it can be extracted from an uncompressed
+    planet file in about 60 seconds. The resulting osm xml file contains 12 relations, 1172 ways and 54749 nodes.
+
+    <hr>
+    <address><a href="mailto:werner@linux-xl08.site">Werner Hoch</a></address>
+<!-- Created: Sat Jan  7 19:33:45 CET 2012 -->
+<!-- hhmts start -->
+Last modified: Sat Jan  7 19:56:41 CET 2012
+<!-- hhmts end -->
+  </body>
+</html>

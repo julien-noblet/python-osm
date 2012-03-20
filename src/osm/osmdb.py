@@ -1,12 +1,11 @@
 #!/usr/bin/python
 
 import sys, os
-import math, re, exceptions
+import math, re
 import bz2
-import cgi,time
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from xml.sax import handler, make_parser, parseString
- 
+
 #################### CONSTANTS
 VERSION = "0.0.2"
 
@@ -59,7 +58,7 @@ class Bisect(object):
         self.cursor = self.min + self.increment - 1
         self.increment /= 2
         return self.cursor
-        
+
     def up(self):
         """
         Move the cursor upwards in binary steps.
@@ -72,7 +71,7 @@ class Bisect(object):
             self.down()
         return self.cursor
 
-    def down(self):        
+    def down(self):
         """
         Move the cursor downwards in binary steps.
         """
@@ -109,7 +108,7 @@ class OsmDb(object):
     def __init__(self, filename):
         self.filename = filename
         self._index = []
-        
+
         self._filesize = os.path.getsize(self.filename)
         self._filehandler = open(self.filename, 'rb')
         self._create_index()
@@ -161,7 +160,7 @@ class OsmDb(object):
 
             log("bisect Nr=%s, seeking %s=%s" %(blocknr, objtype, objid), str(blk))
 
-            res = cmp((sortorder[objtype], objid), 
+            res = cmp((sortorder[objtype], objid),
                       (sortorder.get(blk.first_type, 100), blk.first_id))
 
             if res < 0:
@@ -273,7 +272,7 @@ class OsmDb(object):
             recursions = 100  # maximum recursion level
         else:
             recursions = 1    # only get all direct members
-            
+
         loaded_relationids = set([])
         while relationids:
             r_data = self.get_objects('relation', relationids)
@@ -292,7 +291,7 @@ class OsmDb(object):
             wayids |= osm_handler.ways
             loaded_relationids |= relationids
             relationids = osm_handler.relations - loaded_relationids
-            
+
         if wayids:
             waydata = self.get_objects('way', wayids)
             parser = make_parser()
@@ -305,7 +304,7 @@ class OsmDb(object):
             nodedata = self.get_objects('node', nodeids)
 
         return nodedata + waydata + relationdata
-            
+
     def get_objects(self, objtype, ids=[]):
         """
         get all osm objects listed in ids with the given object type.
@@ -391,10 +390,10 @@ class Bz2Reader(object):
                 log(msg)
                 return False
             break
-        
+
         self.__bz2cursor = self._filehandler.tell()
         return True
-        
+
     def read(self, size):
         """
         Read the given number of bytes from the bz2-file

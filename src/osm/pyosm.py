@@ -175,7 +175,7 @@ class OSMXMLFile(object):
             self.__parse()
         elif content:
             self.__parse(content)
-    
+
     def get_members(self, members):
         mlist = []
         for mtype, mid, mrole in members:
@@ -200,14 +200,21 @@ class OSMXMLFile(object):
             xml.sax.parse(self.filename, handler)
 
     def merge(self, osmxmlfile, update=True):
-        for id, node in osmxmlfile.nodes.items():
-            self.nodes[id] = node
+        self.nodes = dict(osmxmlfile.nodes)
         for id, way in osmxmlfile.ways.items():
             way.osm_parent = self
             self.ways[id] = way
         for id, relation in osmxmlfile.relations.items():
             relation.osm_parent = self
             self.relations[id] = relation
+
+    @staticmethod
+    def write_tags(handler, tags):
+        for name, value in tags.items():
+            handler.characters('  ')
+            handler.startElement('tag', {'k': name, 'v': value})
+            handler.endElement('tag')
+            handler.characters('\n')
 
     def write(self, fileobj):
         if type(fileobj) == str:
@@ -217,19 +224,13 @@ class OSMXMLFile(object):
         handler.startElement('osm', self.osmattrs)
         handler.characters('\n')
 
-        for nodeid in sorted(self.nodes):
-            node = self.nodes[nodeid]
+        for id, node in sorted(self.nodes.items()):
             handler.startElement('node', node.attributes())
-            for name, value in node.tags.items():
-                handler.characters('  ')
-                handler.startElement('tag', {'k': name, 'v': value})
-                handler.endElement('tag')
-                handler.characters('\n')
+            self.write_tags(handler, node.tags)
             handler.endElement('node')
             handler.characters('\n')
 
-        for wayid in sorted(self.ways):
-            way = self.ways[wayid]
+        for id, way in sorted(self.ways.items()):
             handler.startElement('way', way.attributes())
             handler.characters('\n')
             for node in way.nodes:
@@ -237,14 +238,10 @@ class OSMXMLFile(object):
                 handler.startElement('nd', {'ref': str(node.id)})
                 handler.endElement('nd')
                 handler.characters('\n')
-            for name, value in way.tags.items():
-                handler.characters('  ')
-                handler.startElement('tag', {'k': name, 'v': value})
-                handler.endElement('tag')
-                handler.characters('\n')
+            self.write_tags(handler, way.tags)
             handler.endElement('way')
             handler.characters('\n')
-            
+
         for relationid in sorted(self.relations):
             relation = self.relations[relationid]
             handler.startElement('relation', relation.attributes())
@@ -254,11 +251,7 @@ class OSMXMLFile(object):
                 handler.startElement('member', {'type': obj_type, 'ref': str(mid), 'role': mrole})
                 handler.endElement('member')
                 handler.characters('\n')
-            for name, value in relation.tags.items():
-                handler.characters('  ')
-                handler.startElement('tag', {'k': name, 'v': value})
-                handler.endElement('tag')
-                handler.characters('\n')
+            self.write_tags(handler, relation.tags)
             handler.endElement('relation')
             handler.characters('\n')
 
@@ -276,12 +269,8 @@ class OSMXMLFile(object):
 class OSMXMLFileParser(xml.sax.ContentHandler):
     def __init__(self, containing_obj):
         self.containing_obj = containing_obj
-        self.load_nodes = containing_obj.options['load_nodes']
-        self.load_ways = containing_obj.options['load_ways']
-        self.load_relations = containing_obj.options['load_relations']
-        self.load_way_nodes = containing_obj.options['load_way_nodes']
-        self.load_relation_members = containing_obj.options['load_relation_members']
-        self.filterfunc = containing_obj.options['filterfunc']
+        for key in 'load_nodes load_ways load_relations load_way_nodes load_relation_members filterfunc'.split():
+            setattr(self, key, containing_obj.options[key])
 
         self.obj_attrs = None
         self.obj_tags = []
@@ -290,24 +279,19 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         self.osm_attrs = None
 
     def startElement(self, name, attrs):
-        if name == 'node':
-            self.obj_attrs = dict(attrs)
-            
-        elif name == 'way':
-            self.obj_attrs = dict(attrs)
-            
-        elif name == "relation":
+        dictnames = 'node way relation'.split()
+        if name in dictnames:
             self.obj_attrs = dict(attrs)
 
         elif name == 'tag':
             self.obj_tags.append((attrs['k'], attrs['v']))
-            
+
         elif name == "nd":
             self.way_nodes.append(attrs['ref'])
-          
+
         elif name == "member":
             self.rel_members.append((attrs['type'][0],attrs['ref'],attrs['role']))
-          
+
         elif name == "osm":
             self.osm_attrs = dict(attrs)
 
@@ -328,7 +312,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
                     self.containing_obj.nodes[curr_node.id] = curr_node
             self.obj_attrs = None
             self.obj_tags = []
- 
+
         elif name == "way":
             if self.load_ways:
                 curr_way = Way(self.obj_attrs, dict(self.obj_tags), self.way_nodes,
@@ -341,7 +325,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
             self.obj_attrs = None
             self.obj_tags = []
             self.way_nodes = []
-        
+
         elif name == "relation":
             if self.load_relations:
                 curr_rel = Relation(self.obj_attrs, dict(self.obj_tags), self.rel_members,
@@ -363,7 +347,7 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
 #################### FUNCTIONS
 
 
-#################### MAIN            
+#################### MAIN
 if __name__ == '__main__':
     import sys
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s - %(message)s")

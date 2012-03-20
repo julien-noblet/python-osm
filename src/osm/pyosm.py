@@ -149,7 +149,10 @@ class Relation(object):
         return d
 
     def __repr__(self):
-        members = [(a,b,c) for a,b,c in self.__members]
+        if self.__members:
+            members = [(a,b,c) for a,b,c in self.__members]
+        else:
+            members = None
         return "Relation(attrs=%r, tags=%r, members=%r)" % (self.attributes(), self.__tags, members)
 
 
@@ -328,7 +331,8 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
  
         elif name == "way":
             if self.load_ways:
-                curr_way = Way(self.obj_attrs, dict(self.obj_tags), self.way_nodes, osm_parent=self.containing_obj)
+                curr_way = Way(self.obj_attrs, dict(self.obj_tags), self.way_nodes,
+                               osm_parent=self.containing_obj, load_nodes=self.load_way_nodes)
                 if self.filterfunc:
                     if self.filterfunc(curr_way):
                         self.containing_obj.ways[curr_way.id] = curr_way
@@ -340,9 +344,10 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         
         elif name == "relation":
             if self.load_relations:
-                curr_rel = Relation(self.obj_attrs, dict(self.obj_tags), self.rel_members, osm_parent=self.containing_obj)
+                curr_rel = Relation(self.obj_attrs, dict(self.obj_tags), self.rel_members,
+                                    osm_parent=self.containing_obj, load_members=self.load_relation_members)
                 if self.filterfunc:
-                    if self.filterfunc(self.curr_relation):
+                    if self.filterfunc(curr_rel):
                         self.containing_obj.relations[curr_rel.id] = curr_rel
                 else:
                     self.containing_obj.relations[curr_rel.id] = curr_rel

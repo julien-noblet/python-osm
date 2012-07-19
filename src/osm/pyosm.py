@@ -16,8 +16,13 @@ class Node(object):
 
     def __init__(self, attrs, tags=None, load_tags=True, load_attrs=True):
         self.id = int(attrs.pop('id'))
-        self.lon = float(attrs.pop('lon'))
-        self.lat = float(attrs.pop('lat'))
+        if attrs.get('visible', '') == 'false':
+            self.lon = 0.0
+            self.lat = 0.0
+        else:
+            self.lon = float(attrs.pop('lon'))
+            self.lat = float(attrs.pop('lat'))
+        
         if load_attrs:
             self.__attrs = attrs
         else:
@@ -200,7 +205,7 @@ class OSMXMLFile(object):
             xml.sax.parse(self.filename, handler)
 
     def merge(self, osmxmlfile, update=True):
-        self.nodes = dict(osmxmlfile.nodes)
+        self.nodes.update(osmxmlfile.nodes)
         for id, way in osmxmlfile.ways.items():
             way.osm_parent = self
             self.ways[id] = way

@@ -10,33 +10,66 @@ log = logging.getLogger("pyosm")
 
 
 #################### CLASSES
+class Attributes(object):
+    """
+    common attributes for all object types
+    """
+    __slot__ = ['timestamp', 'uid', 'user', 'visible', 'version', 'changeset']
+
+    def __init__(self, attrs):
+        self.timestamp = attrs.get('timestamp','')
+        self.version = attrs.get('version', '')
+        self.changeset = attrs.get('changeset','')
+        self.uid = attrs.get('uid','')
+        self.user = attrs.get('user','')
+        self.visible = attrs.get('visible','')
+
+    def set_attr(self, name, value):
+        if hasattr(self, name):
+            setattr(self,name, value)
+        else:
+            raise KeyError
+
+    def get(self, name, default=None):
+        if hasattr(self, name):
+            return getattr(self,name)
+        else:
+            return default
+
+    def get_all(self):
+        return {'timestamp': self.timestamp,
+                'version': self.version,
+                'changeset': self.changeset,
+                'uid': self.uid,
+                'user': self.user,
+                'visible': self.visible}
+        
+
 class Node(object):
     __slot__ = ['id', 'lat', 'lon','__attrs', '__tags']
-    ATTRIBUTES = set(['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'lat', 'lon', 'changeset'])
 
     def __init__(self, attrs, tags=None, load_tags=True, load_attrs=True):
+        self.lon = 0.0
+        self.lat = 0.0
+        self.__attrs = None
+        self.__tags = None
+            
         self.id = int(attrs.pop('id'))
-        if attrs.get('visible', '') == 'false':
-            self.lon = 0.0
-            self.lat = 0.0
-        else:
+        if attrs.get('visible', '') != 'false':
             self.lon = float(attrs.pop('lon'))
             self.lat = float(attrs.pop('lat'))
         
         if load_attrs:
-            self.__attrs = attrs
-        else:
-            self.__attrs = None
+            self.__attrs = Attributes(attrs)
+
         if load_tags:
             self.__tags = tags
-        else:
-            self.__tags = None
 
     def __getattr__(self, name):
-        if name in self.ATTRIBUTES:
-            return self.__attrs[name]
-        elif name == 'tags':
+        if name == 'tags':
             return self.__tags
+        elif self.__attrs:
+            return self.__attrs.get(name)
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -47,12 +80,15 @@ class Node(object):
             return cmp_name
         return cmp(self.id, other.id)
 
+    def set_attr(self, name, value):
+        self.__attrs.set_attr(name, value)
+
     def attributes(self):
         d = {'id': repr(self.id),
              'lat': repr(self.lat),
              'lon': repr(self.lon)}
         if self.__attrs:
-            d.update(self.__attrs)
+            d.update(self.__attrs.get_all())
         return d
 
     def __repr__(self):
@@ -61,23 +97,21 @@ class Node(object):
 
 class Way(object):
     __slot__ = ['id', '__attrs','__tags','__nodes', 'osm_parent']
-    ATTRIBUTES = set(['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset'])
 
     def __init__(self, attrs, tags=None, nodes=None, osm_parent=None, load_tags=True, load_attrs=True, load_nodes=True):
+        self.__nodes = None
+        self.__attrs = None
+        self.__tags = None
+
         self.id = int(attrs.pop('id'))
         self.osm_parent = osm_parent
+
         if load_nodes:
             self.__nodes = numpy.asarray(nodes, dtype='int32')
-        else:
-            self.__nodes = None
         if load_attrs:
-            self.__attrs = attrs
-        else:
-            self.__attrs = None
+            self.__attrs = Attributes(attrs)
         if load_tags:
             self.__tags = tags
-        else:
-            self.__tags = None
 
     def __getattr__(self, name):
         if name == 'nodes':
@@ -86,8 +120,8 @@ class Way(object):
             return list(self.__nodes)
         elif name == 'tags':
             return self.__tags
-        elif name in self.ATTRIBUTES:
-            return self.__attrs[name]
+        elif self.__attrs:
+            return self.__attrs.get(name)
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -98,10 +132,13 @@ class Way(object):
             return cmp_name
         return cmp(self.id, other.id)
 
+    def set_attr(self, name, value):
+        self.__attrs.set_attr(name, value)
+
     def attributes(self):
         d = {'id': repr(self.id)}
         if self.__attrs:
-            d.update(self.__attrs)
+            d.update(self.__attrs.get_all())
         return d
 
     def __repr__(self):
@@ -110,23 +147,21 @@ class Way(object):
 
 class Relation(object):
     __slot__ = ['id', '__attrs','__tags','__members', 'osm_parent']
-    ATTRIBUTES = set(['id', 'timestamp', 'uid', 'user', 'visible', 'version', 'changeset'])
 
     def __init__(self, attrs, tags=None, members=None, osm_parent=None, load_tags=True, load_attrs=True, load_members=True):
+        self.__members = None
+        self.__attrs = None
+        self.__tags = None
+
         self.id = int(attrs.pop('id'))
         self.osm_parent = osm_parent
+
         if load_members:
             self.__members = numpy.array(members, dtype=[('type','|S1'),('id','<i4'),('role',numpy.object_)])
-        else:
-            self.__members = None
         if load_attrs:
-            self.__attrs = attrs
-        else:
-            self.__attrs = None
+            self.__attrs = Attributes(attrs)
         if load_tags:
             self.__tags = tags
-        else:
-            self.__tags = None
 
     def __getattr__(self, name):
         if name == 'members':
@@ -135,8 +170,8 @@ class Relation(object):
             return list(self.__members)
         elif name == 'tags':
             return self.__tags
-        elif name in self.ATTRIBUTES:
-            return self.__attrs[name]
+        elif self.attrs:
+            return self.__attrs.get(name)
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -147,10 +182,13 @@ class Relation(object):
             return cmp_name
         return cmp(self.id, other.id)
 
+    def set_attr(self, name, value):
+        self.__attrs.set_attr(name, value)
+
     def attributes(self):
         d = {'id': repr(self.id)}
         if self.__attrs:
-            d.update(self.__attrs)
+            d.update(self.__attrs.get_all())
         return d
 
     def __repr__(self):

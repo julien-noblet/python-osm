@@ -67,7 +67,8 @@ def bisect(objtype, objid, date, maxversion=None ):
 
     conn.request('GET', url)
     ans = conn.getresponse()
-    curr_osm = pyosm.OSMXMLFile(content=ans.read())
+    content=ans.read()
+    curr_osm = pyosm.OSMXMLFile(content=content)
     curr_obj = getobject(curr_osm, objtype, objid)
     newest_version = int(curr_obj.version)
 
@@ -98,7 +99,7 @@ def bisect(objtype, objid, date, maxversion=None ):
 
     if newest_version > int(curr_obj.version):
         curr_obj.tags['osmhistory:old_version_date'] = str(int(curr_obj.version)) + '_' + date
-    curr_obj.version = str(newest_version)
+    curr_obj.set_attr('version', str(newest_version))
     
     conn.close()
     return curr_osm

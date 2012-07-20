@@ -170,7 +170,7 @@ class Relation(object):
             return list(self.__members)
         elif name == 'tags':
             return self.__tags
-        elif self.attrs:
+        elif self.__attrs:
             return self.__attrs.get(name)
 
     def __cmp__(self, other):

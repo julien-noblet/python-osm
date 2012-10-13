@@ -171,6 +171,30 @@ class multipolygon(object):
             points.append((float(node.lon), float(node.lat)))
         return points
 
+    def write_osmosis_file(self, filename):
+        """
+        create a boundary polygon for osmosis
+        """
+        fid = open(filename, 'wt')
+        n = 1
+        fid.write('xxx\n')
+        for op in mp.outer_polygons:
+            fid.write('%i\n' %(n))
+            for node in op:
+                fid.write('\t%s\t%s\n' %(node.lon, node.lat))
+            fid.write('END\n')
+            n += 1
+            
+        for ip in mp.inner_polygons:
+            fid.write('xxx\n')
+            fid.write('!%i\n' %(n))
+            for node in ip:
+                fid.write('\t%f\t%f\n' %(node.lat, node.lon))
+            fid.write('END\n')
+            n += 1
+        fid.write('END\n')
+        fid.close()
+
     def status(self):
         """
         print the status of the multipolygon file.
@@ -249,24 +273,8 @@ if __name__ == '__main__':
     mp = multipolygon(osmobj.relations[int(relation)])
 
     if osmosisfile:
-        fd = open(osmosisfile, 'wt')
-        n = 1
-        fd.write('xxx\n')
-        for op in mp.outer_polygons:
-            fd.write('%i\n' %(n))
-            for node in op:
-                fd.write('\t%s\t%s\n' %(node.lon, node.lat))
-            fd.write('END\n')
-            n += 1
-            
-        for ip in mp.inner_polygons:
-            fd.write('xxx\n')
-            fd.write('!%i\n' %(n))
-            for node in ip:
-                fd.write('\t%f\t%f\n' %(node.lat, node.lon))
-            fd.write('END\n')
-            n += 1
-        fd.write('END\n')
+        mp.write_osmosis_file(osmosisfile)        
+
 
     else:
         mp.status()

@@ -12,6 +12,7 @@ setup(
     py_modules = ['osm.pyosm',
                   'osm.multipolygon',
                   'osm.osmdb',
+                  'osm.utils'
                   ],
     package_dir = {'osm': 'src/osm'},
 )

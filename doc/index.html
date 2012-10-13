@@ -39,6 +39,7 @@ export osmosis boundary polygon or check the multipolygon for errors
   -i, --infile: osmfile to load
   -r, --relation: multipolygon relation id
   -m, --osmosispolygon: outfile for osmosis boundary polygon
+  -j, --josmfile: outfile for josm boundary
         </td></tr>
     </table>
     
@@ -62,10 +63,19 @@ Multipolygon of Relation 1164629
         </td></tr>
     </table>
     <p>
+
     To export relation with id=62578 as polygon file for osmosis:
     <table>
 	<tr><td bgcolor="#CCCCCC">
 <pre>werner@linux-g0e5:~/osm/src/python-osm/src/osm> ./multipolygon.py -r 62578 -m boundary.poly</pre>
+        </td></tr>
+    </table>
+    <p>
+
+    To create an empty josmfile with the tiled bounds of the multipolygon with id=289122 as polygon:
+    <table>
+	<tr><td bgcolor="#CCCCCC">
+<pre>werner@linux-g0e5:~/osm/src/python-osm/src/osm> ./multipolygon.py -r 289122 -j josmfile.xml</pre>
         </td></tr>
     </table>
 
@@ -104,7 +114,7 @@ load relations from the OSM API and create gpx files
     <address><a href="mailto:werner@linux-xl08.site">Werner Hoch</a></address>
 <!-- Created: Sat Dec 17 12:25:09 CET 2011 -->
 <!-- hhmts start -->
-Last modified: Sat Jan  7 19:28:27 CET 2012
+Last modified: Sat Oct 13 11:23:24 CEST 2012
 <!-- hhmts end -->
   </body>
 </html>

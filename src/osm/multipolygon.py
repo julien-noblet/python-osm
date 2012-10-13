@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import pyosm
+from utils import deg2num, num2deg
 import numpy
 import matplotlib.nxutils
 
@@ -195,6 +196,52 @@ class multipolygon(object):
         fid.write('END\n')
         fid.close()
 
+    def write_josm_file(self, filename, tilezoom=14):
+        """
+        create a osm file for the editor JOSM, that only contains the download boundary
+        information.
+        Load the file in JOSM and update the data.
+        Note: Please do not missuse this function to download large areas with josm
+        """ 
+        from shapely.geometry import LineString, Polygon
+
+        f_out = open(filename,'w')
+        f_out.write("<?xml version='1.0' encoding='UTF-8'?>\n")
+        f_out.write("<osm version='0.6' upload='true' generator='JOSM'>\n")
+        
+        for i, op in enumerate(self.outer_polygons):
+            # create coordinate list and then a polygon
+            plist = [(node.lat, node.lon) for node in op]
+            outer_polygon = Polygon(LineString(plist))
+
+            if not outer_polygon.is_valid:
+                raise ValueError('outer polygon no %i is not valid' % (i+1))
+
+            (minlat, minlon, maxlat, maxlon) = outer_polygon.bounds
+            (x1, y2) = deg2num(minlat, minlon, tilezoom)
+            (x2, y1) = deg2num(maxlat, maxlon, tilezoom)
+
+            for ty in range(y1, y2 + 1):
+                for tx in range(x1, x2 + 1):
+                    tile_rectangle = [num2deg(tx, ty, tilezoom),
+                                      num2deg(tx+1, ty, tilezoom),
+                                      num2deg(tx+1, ty+1, tilezoom),
+                                      num2deg(tx, ty+1, tilezoom),
+                                      num2deg(tx, ty, tilezoom)]
+                    tile_polygon = Polygon(tile_rectangle)
+
+                    if outer_polygon.contains(tile_polygon) or outer_polygon.intersects(tile_polygon):
+                        minlat = tile_rectangle[3][0]
+                        minlon = tile_rectangle[3][1]
+                        maxlat = tile_rectangle[1][0]
+                        maxlon = tile_rectangle[1][1]
+
+                        f_out.write('  <bounds minlat="%.7f" minlon="%.7f" maxlat="%.7f" maxlon="%.7f" />\n' \
+                                    % (minlat-0.0000001, minlon-0.0000001, maxlat+0.0000001, maxlon+0.0000001))
+
+        f_out.write("</osm>\n")
+        f_out.close
+
     def status(self):
         """
         print the status of the multipolygon file.
@@ -203,6 +250,9 @@ class multipolygon(object):
         """
 
         print 'Multipolygon of Relation %s' % (self.relation.id)
+        name = self.relation.tags.get('name', '')
+        if name:
+            print '  Name-Tag: ', name
         print '  Outer Polygons (%i):' % len(self.outer_polygons)
         for i, op in enumerate (self.outer_polygons):
             print '    %d: %d Nodes' %(i+1, len(op))
@@ -228,8 +278,9 @@ def usage():
     print "-i, --infile: osmfile to load"
     print "-r, --relation: multipolygon relation id"
     print "-m, --osmosispolygon: outfile for osmosis boundary polygon"
-    
-    
+    print "-j, --josmfile: outfile for josm boundary"
+
+
 #################### MAIN
 if __name__ == '__main__':
     import sys
@@ -237,8 +288,8 @@ if __name__ == '__main__':
     import urllib
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'r:i:m:h',
-                                   ['help', 'relation=', 'infile=', 'osmosispolygon='])
+        opts, args = getopt.getopt(sys.argv[1:], 'r:i:m:j:h',
+                                   ['help', 'relation=', 'infile=', 'osmosispolygon=', 'josmfile='])
     except getopt.GetoptError:
         usage()
         sys.exit()
@@ -246,6 +297,7 @@ if __name__ == '__main__':
     mode = None
     infile = None
     osmosisfile = None
+    josmfile = None
     relation = None
 
     for o, a in opts:
@@ -255,6 +307,8 @@ if __name__ == '__main__':
             relation = a
         elif o in ['-m', '--osmosispolygon']:
             osmosisfile = a
+        elif o in ['-j', '--josmfile']:
+            josmfile = a
         elif o in ['-h', '--help']:
             usage()
             sys.exit()
@@ -273,8 +327,10 @@ if __name__ == '__main__':
     mp = multipolygon(osmobj.relations[int(relation)])
 
     if osmosisfile:
-        mp.write_osmosis_file(osmosisfile)        
+        mp.write_osmosis_file(osmosisfile)
 
+    elif josmfile:
+        mp.write_josm_file(josmfile)
 
     else:
         mp.status()

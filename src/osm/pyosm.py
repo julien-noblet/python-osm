@@ -268,13 +268,14 @@ class OSMXMLFile(object):
         handler.characters('\n')
 
         for id, node in sorted(self.nodes.items()):
-            handler.startElement('node', node.attributes())
+            handler.startElement('node', {k:v for k,v in node.attributes().items() if v })
+            handler.characters('\n')
             self.write_tags(handler, node.tags)
             handler.endElement('node')
             handler.characters('\n')
 
         for id, way in sorted(self.ways.items()):
-            handler.startElement('way', way.attributes())
+            handler.startElement('way', {k:v for k,v in way.attributes().items() if v })
             handler.characters('\n')
             for node in way.nodes:
                 handler.characters('  ')
@@ -287,7 +288,7 @@ class OSMXMLFile(object):
 
         for relationid in sorted(self.relations):
             relation = self.relations[relationid]
-            handler.startElement('relation', relation.attributes())
+            handler.startElement('relation', {k:v for k,v in relation.attributes().items() if v })
             for mtype, mid, mrole in relation.member_data:
                 obj_type = {'n': 'node', 'w': 'way', 'r': 'relation'}[mtype]
                 handler.characters('  ')

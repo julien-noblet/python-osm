@@ -3,7 +3,7 @@
 # Original version by Rory McCann (http://blog.technomancy.org/)
 # Modifications by Christoph Lupprich (http://www.stopbeingcarbon.com)
 #
-import xml.sax
+import xml.sax.saxutils
 import numpy
 import logging
 log = logging.getLogger("pyosm")

@@ -186,7 +186,7 @@ class OsmDb(object):
         debug function to print all index items
         """
         for i,b in enumerate(self._index):
-            print i, str(b)
+            print (i, str(b))
 
     def write_relations(self, filename):
         """
@@ -330,7 +330,7 @@ class OsmDb(object):
                         break
                     elif lineid > objid:
                         line = ""
-                        print objtype, objid, "not found"
+                        print (objtype, objid, "not found")
                         lastid = objid - 10000
                         break
             if line == "":
@@ -379,14 +379,14 @@ class Bz2Reader(object):
         while datain:
             try:
                 self.__databuffer += self.__bz2dc.decompress(datain)
-            except EOFError, msg:
+            except EOFError as msg:
                 log(msg, len(self.__bz2dc.unused_data))
                 if len(self.__bz2dc.unused_data) > 4:
                     log("unused head", self.__bz2dc.unused_data[:4])
                 datain = self.__bz2dc.unused_data
                 self.__bz2dc = bz2.BZ2Decompressor()
                 continue
-            except Exception, msg:
+            except Exception as msg:
                 log(msg)
                 return False
             break
@@ -631,7 +631,7 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self):
-        print self.path
+        print (self.path)
         osm = self.server.osmdb
         toks = self.path.split('?')
         if len(toks) != 2:
@@ -678,29 +678,29 @@ def runserver(port, osmdb):
     try:
         server = HTTPServer(('', port), OSMHttpHandler)
         server.osmdb = osmdb
-        print 'started httpserver...'
+        print ('started httpserver...')
         server.serve_forever()
     except KeyboardInterrupt:
-        print '^C received, shutting down server'
+        print ('^C received, shutting down server')
         server.socket.close()
 
 def log(*args):
     """ simple helper function for debugging"""
     return
     for a in args:
-        print a,
-    print
+        print (a,end=" ")
+    print()
 
 def usage():
-    print sys.argv[0] + " Version " + VERSION
-    print "  -h, --help: print this help information"
-    print "  --relations=outfile: split relations from input file"
-    print "  --ways_relations=outfile: split ways and relations from input file"
-    print "  --server=port: start a http-Server on Port"
-    print "Examples:"
-    print "  osmdb.py --relations=out.osm.bz2 germany.osm.bz2"
-    print "  osmdb.py --ways_relations=/dev/stdout planet-latest.osm"
-    print "  osmdb.py --server=8888 germany.osm"
+    print (sys.argv[0] + " Version " + VERSION)
+    print ("  -h, --help: print this help information")
+    print ("  --relations=outfile: split relations from input file")
+    print ("  --ways_relations=outfile: split ways and relations from input file")
+    print ("  --server=port: start a http-Server on Port")
+    print ("Examples:")
+    print ("  osmdb.py --relations=out.osm.bz2 germany.osm.bz2")
+    print ("  osmdb.py --ways_relations=/dev/stdout planet-latest.osm")
+    print ("  osmdb.py --server=8888 germany.osm")
 
 
 #################### MAIN

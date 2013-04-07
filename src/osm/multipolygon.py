@@ -249,36 +249,36 @@ class multipolygon(object):
           * number and list of unclosed outer and inner polygons
         """
 
-        print 'Multipolygon of Relation %s' % (self.relation.id)
+        print ('Multipolygon of Relation %s' % (self.relation.id))
         name = self.relation.tags.get('name', '')
         if name:
-            print '  Name-Tag: ', name
-        print '  Outer Polygons (%i):' % len(self.outer_polygons)
+            print ('  Name-Tag: ', name)
+        print ('  Outer Polygons (%i):' % len(self.outer_polygons))
         for i, op in enumerate (self.outer_polygons):
-            print '    %d: %d Nodes' %(i+1, len(op))
+            print ('    %d: %d Nodes' %(i+1, len(op)))
 
-        print '  Inner Polygons (%i):' % len(self.inner_polygons)
+        print ('  Inner Polygons (%i):' % len(self.inner_polygons))
         for i, ip in enumerate (self.inner_polygons):
-            print '    %d: %d Nodes' %(i+1, len(ip))
+            print ('    %d: %d Nodes' %(i+1, len(ip)))
 
-        print '  Open Outer Ways (%i):' % len(self.outer_ways)
+        print ('  Open Outer Ways (%i):' % len(self.outer_ways))
         for i, ow in enumerate (self.outer_ways):
-            print '    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i+1, len(ow), ow[0].id, ow[-1].id)
+            print ('    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i+1, len(ow), ow[0].id, ow[-1].id))
 
-        print '  Open Inner Ways (%i):' % len(self.inner_ways)
+        print ('  Open Inner Ways (%i):' % len(self.inner_ways))
         for i, iw in enumerate (self.inner_ways):
-            print '    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i+1, len(iw), iw[0].id, iw[-1].id)
+            print ('    %d: %d Nodes, id(Node[0])=%s, id(Node[-1])=%s' %(i+1, len(iw), iw[0].id, iw[-1].id))
 
 
 def usage():
-    print "usage: multipolygon.py --relation=ID [options]"
-    print "load a multipolygon from the OSM-API or from an OSM file"
-    print "export osmosis boundary polygon or check the multipolygon for errors"
-    print "-h, --help: print this usage message"
-    print "-i, --infile: osmfile to load"
-    print "-r, --relation: multipolygon relation id"
-    print "-m, --osmosispolygon: outfile for osmosis boundary polygon"
-    print "-j, --josmfile: outfile for josm boundary"
+    print ("usage: multipolygon.py --relation=ID [options]")
+    print ("load a multipolygon from the OSM-API or from an OSM file")
+    print ("export osmosis boundary polygon or check the multipolygon for errors")
+    print ("-h, --help: print this usage message")
+    print ("-i, --infile: osmfile to load")
+    print ("-r, --relation: multipolygon relation id")
+    print ("-m, --osmosispolygon: outfile for osmosis boundary polygon")
+    print ("-j, --josmfile: outfile for josm boundary")
 
 
 #################### MAIN

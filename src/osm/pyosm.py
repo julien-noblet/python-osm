@@ -107,7 +107,7 @@ class Way(object):
         self.osm_parent = osm_parent
 
         if load_nodes:
-            self.__nodes = numpy.asarray(nodes, dtype='int32')
+            self.__nodes = numpy.asarray(nodes, dtype='int64')
         if load_attrs:
             self.__attrs = Attributes(attrs)
         if load_tags:
@@ -157,7 +157,7 @@ class Relation(object):
         self.osm_parent = osm_parent
 
         if load_members:
-            self.__members = numpy.array(members, dtype=[('type','|S1'),('id','<i4'),('role',numpy.object_)])
+            self.__members = numpy.array(members, dtype=[('type','|S1'),('id','<i8'),('role',numpy.object_)])
         if load_attrs:
             self.__attrs = Attributes(attrs)
         if load_tags:
@@ -222,17 +222,17 @@ class OSMXMLFile(object):
     def get_members(self, members):
         mlist = []
         for mtype, mid, mrole in members:
-            if mtype == 'r':
-                obj = self.realtions[mid]
-            elif mtype == 'w':
-                obj = self.ways[mid]
+            if mtype == b'r':
+                obj = self.realtions[int(mid)]
+            elif mtype == b'w':
+                obj = self.ways[int(mid)]
             else:
-                obj = self.nodes[mid]
+                obj = self.nodes[int(mid)]
             mlist.append((obj, mrole))
         return mlist
 
     def get_nodes(self, nodes):
-        return [ self.nodes[nid] for nid in nodes ]
+        return [ self.nodes[int(nid)] for nid in nodes ]
 
     def __parse(self, content=None):
         """Parse the given XML file"""

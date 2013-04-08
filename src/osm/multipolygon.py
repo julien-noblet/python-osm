@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import pyosm
-from utils import deg2num, num2deg
+import osm.pyosm 
+from .utils import deg2num, num2deg
 import numpy
 import matplotlib.nxutils
 

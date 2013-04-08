@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import osm.pyosm 
+import osm.pyosm as pyosm
 from .utils import deg2num, num2deg
 import numpy
 import matplotlib.nxutils
@@ -63,7 +63,7 @@ class multipolygon(object):
         poly_nodes = []
 
         while endnodes:
-            way = endnodes[endnodes.keys()[0]][0]
+            way = iter(endnodes.values()).__next__()[0]
             startway = way
             endway = way
             poly_nodes.extend(way.nodes)

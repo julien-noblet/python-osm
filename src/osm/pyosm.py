@@ -107,7 +107,7 @@ class Way(object):
         self.osm_parent = osm_parent
 
         if load_nodes:
-            self.__nodes = numpy.asarray(nodes, dtype='int32')
+            self.__nodes = numpy.asarray(nodes, dtype='int64')
         if load_attrs:
             self.__attrs = Attributes(attrs)
         if load_tags:

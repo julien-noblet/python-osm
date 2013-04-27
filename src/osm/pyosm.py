@@ -192,7 +192,7 @@ class Relation(object):
         return d
 
     def __repr__(self):
-        if self.__members:
+        if self.__members != None:
             members = [(a,b,c) for a,b,c in self.__members]
         else:
             members = None
@@ -223,7 +223,7 @@ class OSMXMLFile(object):
         mlist = []
         for mtype, mid, mrole in members:
             if mtype == b'r':
-                obj = self.realtions[int(mid)]
+                obj = self.relations[int(mid)]
             elif mtype == b'w':
                 obj = self.ways[int(mid)]
             else:

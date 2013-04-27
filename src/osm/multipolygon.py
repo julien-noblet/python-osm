@@ -127,7 +127,7 @@ class multipolygon(object):
 
     def recursive_members(self, relation):
         """
-        collect recursively all way/node members of a hirarchical multipolygon relation.
+        collect recursively all way/node members of a hierarchical multipolygon relation.
         returns a list of (obj,role) tuples of all member elements.
         """
         todo_stack = [relation]
@@ -136,17 +136,19 @@ class multipolygon(object):
 
         while todo_stack:
             current_relation = todo_stack.pop(0)
-
+            
             if current_relation in recursive_relations:
                 raise Exception('recursion loops in relation %i' % self.relation.id)
             recursive_relations.add(current_relation)
-            
+
             for m in current_relation.members:
                 obj, role = m
-                if type(obj) == pyosm.Relation:
-                    todo_stack.append(m)
-                else:
+                if type(obj) == pyosm.Relation and role in ['inner','outer','']:
+                    todo_stack.append(obj)
+                elif role in ['inner','outer','']:
                     members.append(m)
+                else: # drop all bad members like subarea, admin_centre
+                    pass
 
         return members
 

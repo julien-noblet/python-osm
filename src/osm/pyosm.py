@@ -223,7 +223,7 @@ class OSMXMLFile(object):
         mlist = []
         for mtype, mid, mrole in members:
             if mtype == 'r':
-                obj = self.realtions[mid]
+                obj = self.relations[mid]
             elif mtype == 'w':
                 obj = self.ways[mid]
             else:

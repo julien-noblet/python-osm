@@ -4,6 +4,7 @@ import pyosm
 from utils import deg2num, num2deg
 import numpy
 import matplotlib.nxutils
+import sys
 
 class multipolygon(object):
 

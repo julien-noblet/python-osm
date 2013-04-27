@@ -192,7 +192,7 @@ class Relation(object):
         return d
 
     def __repr__(self):
-        if self.__members:
+        if self.__members != None:
             members = [(a,b,c) for a,b,c in self.__members]
         else:
             members = None

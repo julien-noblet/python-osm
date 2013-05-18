@@ -157,7 +157,7 @@ class Relation(object):
         self.osm_parent = osm_parent
 
         if load_members:
-            self.__members = numpy.array(members, dtype=[('type','|S1'),('id','<i4'),('role',numpy.object_)])
+            self.__members = numpy.array(members, dtype=[('type','|S1'),('id','<i8'),('role',numpy.object_)])
         if load_attrs:
             self.__attrs = Attributes(attrs)
         if load_tags:

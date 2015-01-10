@@ -626,7 +626,7 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
         self.wfile.write("  ways?ways=id1,id2,...<br>")
         self.wfile.write("  relations?relations=id1,id2,...<br>")
         self.wfile.write("  ways?ways=id1,id2,...&mode=full<br>")
-        self.wfile.write("  relations?relations=id1,id2,...&mode=full")
+        self.wfile.write("  relations?relations=id1,id2,...&mode=full<br>")
         self.wfile.write("  relations?relations=id1,id2,...&mode=recursive")
         return
 

@@ -117,7 +117,7 @@ class OsmDb(object):
         self._filesize = os.path.getsize(self.filename)
         self._filehandler = open(self.filename, 'rb')
         self._create_index()
-        self._order = {'node': 0, 'way': 1, 'relation': 2}
+        self._order = {'changeset': -1, 'node': 0, 'way': 1, 'relation': 2}
 
     def _create_index(self):
         """
@@ -140,7 +140,7 @@ class OsmDb(object):
             if line == False: ## EOF or Error
                 return False
             else:
-                for obj in ['node', 'way', 'relation']:
+                for obj in ['node', 'way', 'relation','changeset']:
                     if re.match('[ \t]*<%s id="[0-9]*" ' % obj, line):
                         blk.first_type = obj
                         blk.first_id = int(line.split('"')[1])
@@ -198,6 +198,9 @@ class OsmDb(object):
         elif re.match('\s*<relation id="[0-9]*" .*', line):
             lineid = int(line.split('"')[1])
             return cmp((self._order['relation'],lineid),(self._order[objtype], objid))
+        elif re.match('\s*<changeset id="[0-9]*" .*', line):
+            lineid = int(line.split('"')[1])
+            return cmp((self._order['changeset'],lineid),(self._order[objtype], objid))
         else:
             return -2
     
@@ -479,7 +482,7 @@ class Bz2OsmDb(OsmDb):
     def __init__(self, bz2filename):
         self.bz2filename = bz2filename
         self._index = []
-        self._order = {'node': 0, 'way': 1, 'relation': 2}
+        self._order = {'changeset': -1, 'node': 0, 'way': 1, 'relation': 2}
         self._filesize = os.path.getsize(self.bz2filename)
         self._filehandler = open(self.bz2filename, 'rb')
         self._bz2_filehead = self._filehandler.read(4)
@@ -528,7 +531,7 @@ class Bz2OsmDb(OsmDb):
             if line == False: ## EOF or Error
                 return False
             else:
-                for obj in ['node', 'way', 'relation']:
+                for obj in ['node', 'way', 'relation','changeset']:
                     if re.match('[ \t]*<%s id="[0-9]*" ' % obj, line):
                         blk.first_type = obj
                         blk.first_id = int(line.split('"')[1])

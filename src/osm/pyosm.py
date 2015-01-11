@@ -1,6 +1,4 @@
 #!/usr/bin/python
-# Added some accessor methods for Nodes, Ways and Relations classes. See __getitem__ function for these classes, Jan 29, 2014
-# Forked from https://github.com/werner2101/python-osm/blob/master/src/osm/pyosm.py
 # Original version by Rory McCann (http://blog.technomancy.org/)
 # Modifications by Christoph Lupprich (http://www.stopbeingcarbon.com)
 #
@@ -79,6 +77,8 @@ class Node(object):
             return self.lon
         elif name == 'id':
             return self.id
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -135,8 +135,12 @@ class Way(object):
     def __getitem__(self, name):
         if name == 'id':
             return self.id
-        elif name == '__nodes':
-            return self.__nodes
+        elif name == 'nodes':
+            return self.osm_parent.get_nodes(self.__nodes)
+        elif name == 'nodeids':
+            return list(self.__nodes)
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -191,8 +195,12 @@ class Relation(object):
     def __getitem__(self, name):
         if name == 'id':
             return self.id
-        elif name == '__members':
+        elif name == 'members':
+            return self.osm_parent.get_members(self.__members)
+        elif name == 'member_data':
             return self.__members
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))

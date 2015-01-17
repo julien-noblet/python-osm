@@ -5,3 +5,4 @@ tests/*.xml
 tests/*.osm
 tests/*.txt
 tests/*.gpx
+tests/testoutput/*

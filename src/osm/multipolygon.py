@@ -1,10 +1,18 @@
 #!/usr/bin/python
 
+import sys
 import pyosm
 from utils import deg2num, num2deg
 import numpy
-import matplotlib.nxutils
-import sys
+
+try:
+    #nxutils is only used in older matplotlib version (<1.2.x)
+    import matplotlib.nxutils
+    HAS_NXUTILS = True
+except:
+    HAS_NXUTILS = False
+    import matplotlib.path
+
 
 class multipolygon(object):
 
@@ -152,18 +160,25 @@ class multipolygon(object):
 
         return members
 
-    def inside(self, nodes):
+    def inside(self, nodes=[], points=[]):
         """
         check if the nodes from the nodes list are inside the multipolygon
         """
-        points = self.pointlist(nodes)
+        if nodes:
+            points = self.pointlist(nodes)
         matches = numpy.zeros(len(points))
         for outerpoly in self.outer_polygons:
             outerpoints = self.pointlist(outerpoly)
-            matches = matches + matplotlib.nxutils.points_inside_poly(points, outerpoints)
+            if HAS_NXUTILS:
+                matches = matches + matplotlib.nxutils.points_inside_poly(points, outerpoints)
+            else:
+                matches = matches + matplotlib.path.Path(outerpoints).contains_points(points)
         for innerpoly in self.inner_polygons:
             innerpoints = self.pointlist(innerpoly)
-            matches = matches - matplotlib.nxutils.points_inside_poly(points, innerpoints)
+            if HAS_NXUTILS:
+                matches = matches - matplotlib.nxutils.points_inside_poly(points, innerpoints)
+            else:
+                matches = matches - matplotlib.path.Path(innerpoints).contains_points(points)
         return matches
 
     def pointlist(self, nodes):
@@ -182,14 +197,14 @@ class multipolygon(object):
         fid = open(filename, 'wt')
         n = 1
         fid.write('xxx\n')
-        for op in mp.outer_polygons:
+        for op in self.outer_polygons:
             fid.write('%i\n' %(n))
             for node in op:
                 fid.write('\t%s\t%s\n' %(node.lon, node.lat))
             fid.write('END\n')
             n += 1
             
-        for ip in mp.inner_polygons:
+        for ip in self.inner_polygons:
             fid.write('xxx\n')
             fid.write('!%i\n' %(n))
             for node in ip:

@@ -21,31 +21,31 @@ class OSMXMLFileTests(unittest.TestCase):
     def test_osm_objects(self):
         self.osm.statistic()
         r = list(self.osm.relations.values())[-1]
-        log.info('\nSingle relation representation\n', r)
+        log.info('Single relation representation: %s', r)
         w = list(self.osm.ways.values())[-1]
-        log.info('\nSingle way representation\n', w)
+        log.info('\nSingle way representation: %s', w)
         n = list(self.osm.nodes.values())[1]
-        log.info('\nSingle node representation\n', n)
+        log.info('Single node representation: %s', n)
  
-        log.info('\nNodes of a Way:\n', w.nodes)
-        log.info('\nNodeids of a Way:\n', w.nodeids)
+        log.info('Nodes of a Way: %s', w.nodes)
+        log.info('Nodeids of a Way: %s', w.nodeids)
 
-        log.info('\nMember Data of a Relation:\n', r.member_data)
-        log.info('\nMembers of a Relation:\n', r.members)
+        log.info('Member Data of a Relation: %s', r.member_data)
+        log.info('Members of a Relation: %s', r.members)
     
     def test_osm_itemgetter(self):
         log.info('relation item test:')
         r = list(self.osm.relations.values())[0] # get first relation
         for it in ['id','members','member_data','tags']:
-            log.info('  ', it, r[it])
+            log.info('  %s=%s', it, r[it])
         log.info('way item test:')
         w = list(self.osm.ways.values())[0] # get first relation
         for it in ['id','nodes','nodeids','tags']:
-            log.info('  ', it, w[it])
+            log.info('  %s=%s', it, w[it])
         log.info('node item test:')
         n = list(self.osm.nodes.values())[0] # get first relation
         for it in ['id','lat', 'lon','tags']:
-            log.info('  ', it, n[it])
+            log.info('  %s=%s', it, n[it])
     
     def test_merge_write(self):
         osm2 = pyosm.OSMXMLFile(filename='osmfiles/josm_download.osm')
@@ -59,4 +59,5 @@ class OSMXMLFileTests(unittest.TestCase):
 if __name__ == '__main__':
     if not os.path.exists('testoutput'):
         os.mkdir('testoutput')
+    logging.basicConfig(level=logging.INFO)
     unittest.main()

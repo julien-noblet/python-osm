@@ -25,43 +25,43 @@ class OsmDbTests(unittest.TestCase):
     
         log.info('Node: small id')
         ret = self.db.get_objects('node',[1])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Node: regular ids')
         ret = self.db.get_objects('node',[579259,579260])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Node: large ids')
         ret = self.db.get_objects('node',[12345678900])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Way: small id')
         ret = self.db.get_objects('way',[1])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Way: regular ids')
         ret = self.db.get_objects('way',[174372276,168734042])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Way: large ids')
         ret = self.db.get_objects('way',[12345678900])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: small id')
         ret = self.db.get_objects('relation',[1])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: regular ids')
         ret = self.db.get_objects('relation',[6188])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: large ids')
         ret = self.db.get_objects('relation',[12345678900])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: regular id, recursive call')
         ret = self.db.get_objects_recursive('relation',[6188], True)
-        log.info('  return length', len(ret))    
+        log.info('  return length %i', len(ret))    
 
 
 class Bz2OsmDbTests(unittest.TestCase):
@@ -76,44 +76,45 @@ class Bz2OsmDbTests(unittest.TestCase):
     def test_get_objects(self):
         log.info('Node: small id')
         ret = self.db.get_objects('node',[1])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Node: regular ids')
         ret = self.db.get_objects('node',[579259,579260])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Node: large ids')
         ret = self.db.get_objects('node',[12345678900])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Way: small id')
         ret = self.db.get_objects('way',[1])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Way: regular ids')
         ret = self.db.get_objects('way',[174372276,168734042])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Way: large ids')
         ret = self.db.get_objects('way',[12345678900])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: small id')
         ret = self.db.get_objects('relation',[1])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: regular ids')
         ret = self.db.get_objects('relation',[6188])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: large ids')
         ret = self.db.get_objects('relation',[12345678900])
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
         
         log.info('Relation: regular id, recursive call')
         ret = self.db.get_objects_recursive('relation',[6188], True)
-        log.info('  return length', len(ret))
+        log.info('  return length %i', len(ret))
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     unittest.main()        
         

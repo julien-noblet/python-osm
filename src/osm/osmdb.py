@@ -7,12 +7,13 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from xml.sax import handler, make_parser, parseString
 
 #################### CONSTANTS
-VERSION = "0.0.2"
+VERSION = "0.0.3"
 
 OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>""" \
-          """<osm version="0.6" generator="osmdb 0.0.2">"""
+          """<osm version="0.6" generator="osmdb 0.0.3">"""
 OSMTAIL = """</osm>"""
 
+LOGGING = False
 
 #################### CLASSES
 class SubobjectHandler(handler.ContentHandler):
@@ -80,6 +81,10 @@ class Bisect(object):
         self.cursor -= self.increment
         self.increment /= 2
         return self.cursor
+        
+    def __str__(self):
+        return "Bisect: min=%i, max=%i, cursor=%i, increment=%i" \
+               % (self.min, self.max, self.cursor, self.increment)
 
 
 class IndexBlock(object):
@@ -112,6 +117,7 @@ class OsmDb(object):
         self._filesize = os.path.getsize(self.filename)
         self._filehandler = open(self.filename, 'rb')
         self._create_index()
+        self._order = {'changeset': -1, 'node': 0, 'way': 1, 'relation': 2}
 
     def _create_index(self):
         """
@@ -134,7 +140,7 @@ class OsmDb(object):
             if line == False: ## EOF or Error
                 return False
             else:
-                for obj in ['node', 'way', 'relation']:
+                for obj in ['node', 'way', 'relation','changeset']:
                     if re.match('[ \t]*<%s id="[0-9]*" ' % obj, line):
                         blk.first_type = obj
                         blk.first_id = int(line.split('"')[1])
@@ -146,7 +152,6 @@ class OsmDb(object):
         Search the index-block, that contains the given objtype and objid.
         This performs a binary search through the file.
         """
-        sortorder = {'node': 0, 'way': 1, 'relation': 2}
         bisect = Bisect(0, len(self._index)-1)
         blocknr = bisect.reset()
         while True:
@@ -160,27 +165,45 @@ class OsmDb(object):
 
             log("bisect Nr=%s, seeking %s=%s" %(blocknr, objtype, objid), str(blk))
 
-            res = cmp((sortorder[objtype], objid),
-                      (sortorder.get(blk.first_type, 100), blk.first_id))
+            res = cmp((self._order[objtype], objid),
+                      (self._order[blk.first_type], blk.first_id))
 
             if res < 0:
                 if blocknr != 0 and self._index[blocknr-1].valid:
                     blk2 = self._index[blocknr-1]
-                    if blk2.valid and ((sortorder[objtype], objid) >= \
-                                           (sortorder[blk2.first_type], blk2.first_id)):
+                    if blk2.valid and ((self._order[objtype], objid) >= \
+                                       (self._order[blk2.first_type], blk2.first_id)):
                         return blk2
                 blocknr = bisect.down()
+                if blocknr == None: # blocknumber 0
+                    return blk
             elif res == 0:   ## exact match (rare case)
                 return blk
             else:
                 if blocknr == len(self._index)-1:
                     return blk
                 blk2 = self._index[blocknr+1]
-                if blk2.valid and ((sortorder[objtype], objid) < \
-                                       (sortorder[blk2.first_type], blk2.first_id)):
+                if blk2.valid and ((self._order[objtype], objid) < \
+                                   (self._order[blk2.first_type], blk2.first_id)):
                     return blk
                 blocknr = bisect.up()
 
+    def _checkline(self, line, objtype, objid):
+        if re.match('\s*<node id="[0-9]*" .*', line):
+            lineid = int(line.split('"')[1])
+            return cmp((self._order['node'],lineid),(self._order[objtype], objid))            
+        elif re.match('\s*<way id="[0-9]*" .*', line):
+            lineid = int(line.split('"')[1])
+            return cmp((self._order['way'],lineid),(self._order[objtype], objid))            
+        elif re.match('\s*<relation id="[0-9]*" .*', line):
+            lineid = int(line.split('"')[1])
+            return cmp((self._order['relation'],lineid),(self._order[objtype], objid))
+        elif re.match('\s*<changeset id="[0-9]*" .*', line):
+            lineid = int(line.split('"')[1])
+            return cmp((self._order['changeset'],lineid),(self._order[objtype], objid))
+        else:
+            return -2
+    
     def print_index(self):
         """
         debug function to print all index items
@@ -260,7 +283,7 @@ class OsmDb(object):
         relationdata, waydata, nodedata = '','',''
 
         if objtype == 'node':
-            nodids = set(ids)
+            nodeids = set(ids)
         elif objtype == 'way':
             wayids = set(ids)
         elif objtype == 'relation':
@@ -321,19 +344,21 @@ class OsmDb(object):
             lastid = objid
             while True:
                 line = self._filehandler.readline()
-                if re.match('[ \t]*<%s id="[0-9]*" ' % objtype, line):
-                    lineid = int(line.split('"')[1])
-                    if lineid < objid:
-                        continue
-                    elif lineid == objid:
-                        datalines.append(line)
-                        break
-                    elif lineid > objid:
-                        line = ""
-                        print (objtype, objid, "not found")
-                        lastid = objid - 10000
-                        break
-            if line == "":
+                if not line:
+                    break
+                ret = self._checkline(line, objtype, objid)
+                if ret == -2:
+                    continue
+                elif ret == -1: 
+                    continue
+                elif ret == 0:
+                    datalines.append(line)
+                    break
+                elif ret == 1:
+                    line = ""
+                    lastid = objid - 10000
+                    break
+            if not line:
                 continue
             if line[-3:] == '/>\n':
                 continue
@@ -431,6 +456,8 @@ class Bz2Reader(object):
                 res = self.__readbz2(10000)
                 if not res:
                     return False
+                elif res == 'EOF':
+                    return False
             else:
                 line = self.__databuffer[self.__datacursor:ind]
                 self.__datacursor = ind + 1
@@ -455,7 +482,7 @@ class Bz2OsmDb(OsmDb):
     def __init__(self, bz2filename):
         self.bz2filename = bz2filename
         self._index = []
-
+        self._order = {'changeset': -1, 'node': 0, 'way': 1, 'relation': 2}
         self._filesize = os.path.getsize(self.bz2filename)
         self._filehandler = open(self.bz2filename, 'rb')
         self._bz2_filehead = self._filehandler.read(4)
@@ -504,7 +531,7 @@ class Bz2OsmDb(OsmDb):
             if line == False: ## EOF or Error
                 return False
             else:
-                for obj in ['node', 'way', 'relation']:
+                for obj in ['node', 'way', 'relation','changeset']:
                     if re.match('[ \t]*<%s id="[0-9]*" ' % obj, line):
                         blk.first_type = obj
                         blk.first_id = int(line.split('"')[1])
@@ -589,26 +616,29 @@ class Bz2OsmDb(OsmDb):
             lastid = objid
             while True:
                 line = self._bz2reader.readline()
-                if re.match('[ \t]*<%s id="[0-9]*" ' % objtype, line):
-                    lineid = int(line.split('"')[1])
-                    if lineid < objid:
-                        continue
-                    elif lineid == objid:
-                        datalines.append(line)
-                        break
-                    elif lineid > objid:
-                        line = ""
-                        break
-            if line == "":
+                if not line:
+                    break
+                ret = self._checkline(line, objtype, objid)
+                if ret == -2:
+                    continue
+                if ret == -1: 
+                    continue
+                elif ret == 0:
+                     datalines.append(line)
+                     break
+                elif ret == 1:
+                     line = ""
+                     break
+            if not line:
                 continue
-            if line[-2:] == '/>':
+            if line[-2:] == '/>': # object already complete
                 continue
             while True:
                 line = self._bz2reader.readline()
                 datalines.append(line)
                 if re.match('[ \t]*</%s>' %objtype, line):
                     break
-        return '\n'.join(datalines)
+        return '\n'.join(datalines) + '\n'
 
 
 class OSMHttpHandler(BaseHTTPRequestHandler):
@@ -626,7 +656,7 @@ class OSMHttpHandler(BaseHTTPRequestHandler):
         self.wfile.write("  ways?ways=id1,id2,...<br>")
         self.wfile.write("  relations?relations=id1,id2,...<br>")
         self.wfile.write("  ways?ways=id1,id2,...&mode=full<br>")
-        self.wfile.write("  relations?relations=id1,id2,...&mode=full")
+        self.wfile.write("  relations?relations=id1,id2,...&mode=full<br>")
         self.wfile.write("  relations?relations=id1,id2,...&mode=recursive")
         return
 
@@ -686,9 +716,10 @@ def runserver(port, osmdb):
 
 def log(*args):
     """ simple helper function for debugging"""
-    return
+    if not LOGGING:    
+        return
     for a in args:
-        print (a,end=" ")
+        print(a, end=" ")
     print()
 
 def usage():

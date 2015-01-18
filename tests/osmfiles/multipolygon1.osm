@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="CGImap 0.3.3 (7605 thorn-01.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <node id="414931809" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:07Z" user="werner2101" uid="110263" lat="47.6695002" lon="9.5847351"/>
+ <node id="414931808" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:07Z" user="werner2101" uid="110263" lat="47.6698661" lon="9.5843768"/>
+ <node id="414931772" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:03Z" user="werner2101" uid="110263" lat="47.6694904" lon="9.5848229"/>
+ <node id="414931774" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6697613" lon="9.5854147"/>
+ <node id="414931775" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6697604" lon="9.5854939"/>
+ <node id="414931769" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6694387" lon="9.5847120"/>
+ <node id="414931771" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6694215" lon="9.5848001"/>
+ <node id="414931787" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6701269" lon="9.5847044"/>
+ <node id="414931786" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6700808" lon="9.5847568"/>
+ <node id="414931784" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6701720" lon="9.5849577"/>
+ <node id="414931790" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6701298" lon="9.5846301"/>
+ <node id="414931789" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6701318" lon="9.5846680"/>
+ <node id="414931778" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6698082" lon="9.5853887"/>
+ <node id="414931777" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6698044" lon="9.5854996"/>
+ <node id="414931783" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6702371" lon="9.5849764"/>
+ <node id="414931781" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6702276" lon="9.5850617"/>
+ <node id="414931780" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6701650" lon="9.5850437"/>
+ <node id="414931802" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6699239" lon="9.5843433"/>
+ <node id="414931803" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:04Z" user="werner2101" uid="110263" lat="47.6699122" lon="9.5843128"/>
+ <node id="414931800" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6699122" lon="9.5844045"/>
+ <node id="414931806" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6698720" lon="9.5843273"/>
+ <node id="414931805" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6698925" lon="9.5843113"/>
+ <node id="414931794" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6700827" lon="9.5845879"/>
+ <node id="414931795" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6700647" lon="9.5845864"/>
+ <node id="414931792" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6701141" lon="9.5846010"/>
+ <node id="414931799" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:05Z" user="werner2101" uid="110263" lat="47.6700141" lon="9.5846186"/>
+ <node id="414931797" visible="true" version="3" changeset="2146771" timestamp="2009-08-14T20:09:06Z" user="werner2101" uid="110263" lat="47.6700396" lon="9.5845952"/>
+ <node id="929133267" visible="true" version="1" changeset="5904127" timestamp="2010-09-28T13:47:36Z" user="Jörg Ostertag" uid="573" lat="47.6696875" lon="9.5845517"/>
+ <node id="929133271" visible="true" version="1" changeset="5904127" timestamp="2010-09-28T13:47:37Z" user="Jörg Ostertag" uid="573" lat="47.6700097" lon="9.5851938"/>
+ <node id="1370802753" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:10Z" user="werner2101" uid="110263" lat="47.6696576" lon="9.5849099"/>
+ <node id="1370802754" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:10Z" user="werner2101" uid="110263" lat="47.6696796" lon="9.5847785"/>
+ <node id="1370802755" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:10Z" user="werner2101" uid="110263" lat="47.6697084" lon="9.5848530"/>
+ <node id="1370802756" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:10Z" user="werner2101" uid="110263" lat="47.6697549" lon="9.5851204"/>
+ <node id="1370802757" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6697673" lon="9.5846881"/>
+ <node id="1370802758" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6698063" lon="9.5850608"/>
+ <node id="1370802759" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6698170" lon="9.5846369"/>
+ <node id="1370802760" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6698490" lon="9.5851521"/>
+ <node id="1370802761" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6698546" lon="9.5847179"/>
+ <node id="1370802762" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6699130" lon="9.5846583"/>
+ <node id="1370802764" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6699449" lon="9.5850525"/>
+ <node id="1370802765" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6699513" lon="9.5849248"/>
+ <node id="1370802767" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6699889" lon="9.5850068"/>
+ <node id="1370802769" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:11Z" user="werner2101" uid="110263" lat="47.6700065" lon="9.5848652"/>
+ <way id="35381376" visible="true" version="4" changeset="5904127" timestamp="2010-09-28T13:47:44Z" user="Jörg Ostertag" uid="573">
+  <nd ref="414931809"/>
+  <nd ref="414931769"/>
+  <nd ref="414931771"/>
+  <nd ref="414931772"/>
+  <nd ref="414931774"/>
+  <nd ref="414931775"/>
+  <nd ref="414931777"/>
+  <nd ref="414931778"/>
+  <nd ref="929133271"/>
+  <nd ref="414931780"/>
+  <nd ref="414931781"/>
+  <nd ref="414931783"/>
+  <nd ref="414931784"/>
+  <nd ref="414931786"/>
+  <nd ref="414931787"/>
+  <nd ref="414931789"/>
+  <nd ref="414931790"/>
+  <nd ref="414931792"/>
+  <nd ref="414931794"/>
+  <nd ref="414931795"/>
+  <nd ref="414931797"/>
+  <nd ref="414931799"/>
+  <nd ref="414931800"/>
+  <nd ref="414931802"/>
+  <nd ref="414931803"/>
+  <nd ref="414931805"/>
+  <nd ref="414931806"/>
+  <nd ref="414931808"/>
+  <nd ref="929133267"/>
+  <nd ref="414931809"/>
+ </way>
+ <way id="122748199" visible="true" version="1" changeset="8804024" timestamp="2011-07-23T08:18:13Z" user="werner2101" uid="110263">
+  <nd ref="1370802754"/>
+  <nd ref="1370802757"/>
+  <nd ref="1370802759"/>
+  <nd ref="1370802761"/>
+  <nd ref="1370802762"/>
+  <nd ref="1370802769"/>
+  <nd ref="1370802765"/>
+  <nd ref="1370802767"/>
+  <nd ref="1370802764"/>
+  <nd ref="1370802760"/>
+  <nd ref="1370802758"/>
+  <nd ref="1370802756"/>
+  <nd ref="1370802753"/>
+  <nd ref="1370802755"/>
+  <nd ref="1370802754"/>
+ </way>
+ <relation id="179755" visible="true" version="6" changeset="21212135" timestamp="2014-03-20T15:48:12Z" user="PT-53" uid="355065">
+  <member type="way" ref="35381376" role="outer"/>
+  <member type="way" ref="122748199" role="inner"/>
+  <tag k="addr:housenumber" v="1"/>
+  <tag k="addr:street" v="Montfortplatz"/>
+  <tag k="building" v="yes"/>
+  <tag k="historic" v="castle"/>
+  <tag k="name" v="Neues Schloss"/>
+  <tag k="source" v="Tettnanger Gemeindenachrichten vom 30.04.2009"/>
+  <tag k="type" v="multipolygon"/>
+  <tag k="wikipedia" v="de:Neues Schloss (Tettnang)"/>
+ </relation>
+</osm>

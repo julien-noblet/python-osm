@@ -1,5 +1,4 @@
 #!/usr/bin/python
-#
 # Original version by Rory McCann (http://blog.technomancy.org/)
 # Modifications by Christoph Lupprich (http://www.stopbeingcarbon.com)
 #
@@ -70,6 +69,16 @@ class Node(object):
             return self.__tags
         elif self.__attrs:
             return self.__attrs.get(name)
+            
+    def __getitem__(self, name):
+        if name == 'lat':
+            return self.lat
+        elif name == 'lon':
+            return self.lon
+        elif name == 'id':
+            return self.id
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -122,6 +131,16 @@ class Way(object):
             return self.__tags
         elif self.__attrs:
             return self.__attrs.get(name)
+            
+    def __getitem__(self, name):
+        if name == 'id':
+            return self.id
+        elif name == 'nodes':
+            return self.osm_parent.get_nodes(self.__nodes)
+        elif name == 'nodeids':
+            return list(self.__nodes)
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))
@@ -172,6 +191,16 @@ class Relation(object):
             return self.__tags
         elif self.__attrs:
             return self.__attrs.get(name)
+            
+    def __getitem__(self, name):
+        if name == 'id':
+            return self.id
+        elif name == 'members':
+            return self.osm_parent.get_members(self.__members)
+        elif name == 'member_data':
+            return self.__members
+        elif name == 'tags':
+            return self.__tags
 
     def __cmp__(self, other):
         cmp_ref = cmp(self.tags.get('ref',''), other.tags.get('ref',''))

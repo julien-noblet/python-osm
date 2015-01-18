@@ -12,8 +12,8 @@ import multipolygon
 
 class OSMXMLFileTests(unittest.TestCase):
     def setUp(self):
-        self.osm_file = open('osmfiles/multipolygon1.osm').read()
-        self.osm = pyosm.OSMXMLFile(content=self.osm_file)
+        self.osm_file = 'osmfiles/multipolygon1.osm'
+        self.osm = pyosm.OSMXMLFile(self.osm_file)
     
     def tearDown(self):
         pass

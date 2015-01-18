@@ -319,7 +319,7 @@ class OSMXMLFile(object):
             relation = self.relations[relationid]
             handler.startElement('relation', {k:v for k,v in relation.attributes().items() if v })
             for mtype, mid, mrole in relation.member_data:
-                obj_type = {'n': 'node', 'w': 'way', 'r': 'relation'}[mtype]
+                obj_type = {b'n': 'node', b'w': 'way', b'r': 'relation'}[mtype]
                 handler.characters('  ')
                 handler.startElement('member', {'type': obj_type, 'ref': str(mid), 'role': mrole})
                 handler.endElement('member')
@@ -368,11 +368,11 @@ class OSMXMLFileParser(xml.sax.ContentHandler):
         elif name == "osm":
             self.osm_attrs = dict(attrs)
 
-        elif name == "bound":
+        elif name == "bounds":
             pass
 
         else:
-            log.warn("Don't know element %s", name)
+            log.warning("Don't know element %s", name)
 
     def endElement(self, name):
         if name == "node":

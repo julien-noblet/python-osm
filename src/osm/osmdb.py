@@ -3,9 +3,14 @@
 import sys, os
 import math, re
 import bz2
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import logging
+if sys.version_info < (3,0):
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+else:
+    from http.server import BaseHTTPRequestHandler, HTTPServer
 from xml.sax import handler, make_parser, parseString
 
+log = logging.getLogger(__name__)
 #################### CONSTANTS
 VERSION = "0.0.3"
 
@@ -57,7 +62,7 @@ class Bisect(object):
         """
         self.increment = 2**int(math.log(self.max - self.min + 1, 2))
         self.cursor = self.min + self.increment - 1
-        self.increment /= 2
+        self.increment //= 2
         return self.cursor
 
     def up(self):
@@ -67,7 +72,7 @@ class Bisect(object):
         if not self.increment:
             return None
         self.cursor += self.increment
-        self.increment /= 2
+        self.increment //= 2
         while self.cursor > self.max:
             self.down()
         return self.cursor
@@ -79,7 +84,7 @@ class Bisect(object):
         if not self.increment:
             return None
         self.cursor -= self.increment
-        self.increment /= 2
+        self.increment //= 2
         return self.cursor
         
     def __str__(self):
@@ -102,7 +107,6 @@ class IndexBlock(object):
         return "IndexBlock: fileindex=%s, first_type=%s, first_id=%s, valid=%s" \
             % (self.fileindex, self.first_type, self.first_id, self.valid)
 
-
 class OsmDb(object):
     """
     OsmDb offers random access to large osm files that cannot be loaded
@@ -124,7 +128,7 @@ class OsmDb(object):
         Allocate index blocks without validating them.
         """
         CNT = 100000
-        self._index =  [ IndexBlock( i * CNT ) for i in xrange(self._filesize / CNT - 1 ) ]
+        self._index =  [ IndexBlock( i * CNT ) for i in range(self._filesize // CNT - 1 ) ]
 
     def _validate(self, blk):
         """
@@ -158,12 +162,12 @@ class OsmDb(object):
             blk = self._index[blocknr]
             if not self._validate(blk):
                 self._index.pop(blocknr)
-                log("bad block: %s" % blocknr)
+                log.debug("bad block: %s" % blocknr)
                 bisect = Bisect(0, len(self._index)-1)
                 blocknr = bisect.reset()
                 continue
 
-            log("bisect Nr=%s, seeking %s=%s" %(blocknr, objtype, objid), str(blk))
+            log.debug("bisect Nr=%s, seeking %s=%s" %(blocknr, objtype, objid), str(blk))
 
             res = cmp((self._order[objtype], objid),
                       (self._order[blk.first_type], blk.first_id))
@@ -217,7 +221,7 @@ class OsmDb(object):
         If the filename ends with ".bz2", then the relations will be compressed.
         With filename=/dev/stdout you can get a stream of all realations.
         """
-        log("OsmDb: writing relations")
+        log.debug("OsmDb: writing relations")
 
         blk = self._get_block('relation', 0)
         self._filehandler.seek(blk.fileindex)
@@ -238,7 +242,7 @@ class OsmDb(object):
                 break
             fout.write(data)
         fout.close()
-        log("OsmDb: writing relations complete")
+        log.debug("OsmDb: writing relations complete")
 
     def write_ways_relations(self, filename):
         """
@@ -246,7 +250,7 @@ class OsmDb(object):
         If the filename ends with ".bz2", then the relations will be compressed.
         With filename=/dev/stdout you can get a stream of all realations.
         """
-        log("OsmDb: writing ways and relations")
+        log.debug("OsmDb: writing ways and relations")
 
         blk = self._get_block('way', 0)
         self._filehandler.seek(blk.fileindex)
@@ -267,7 +271,7 @@ class OsmDb(object):
                 break
             fout.write(data)
         fout.close()
-        log("OsmDb: writing ways and relations complete")
+        log.debug("OsmDb: writing ways and relations complete")
 
     def get_objects_recursive(self, objtype, ids=[], recursive=False):
         """
@@ -337,7 +341,7 @@ class OsmDb(object):
         datalines = []
         lastid = objids[0] - 10000
         for objid in objids:
-            log(objtype, objid)
+            log.debug(objtype, objid)
             if objid > lastid + 1000:
                 blk = self._get_block(objtype, objid)
                 self._filehandler.seek(blk.fileindex)
@@ -405,14 +409,14 @@ class Bz2Reader(object):
             try:
                 self.__databuffer += self.__bz2dc.decompress(datain)
             except EOFError as msg:
-                log(msg, len(self.__bz2dc.unused_data))
+                log.debug(msg, len(self.__bz2dc.unused_data))
                 if len(self.__bz2dc.unused_data) > 4:
-                    log("unused head", self.__bz2dc.unused_data[:4])
+                    log.debug("unused head", self.__bz2dc.unused_data[:4])
                 datain = self.__bz2dc.unused_data
                 self.__bz2dc = bz2.BZ2Decompressor()
                 continue
             except Exception as msg:
-                log(msg)
+                log.debug(msg)
                 return False
             break
 
@@ -425,7 +429,7 @@ class Bz2Reader(object):
         The size is defined in uncompressed bytes.
         """
         while (len(self.__databuffer) - self.__datacursor) < size:
-            res = self.__readbz2(size / 20)
+            res = self.__readbz2(size // 20)
             if res == 'EOF':
                 data = self.__databuffer[self.__datacursor:]
                 self.__databuffer = ""
@@ -486,7 +490,7 @@ class Bz2OsmDb(OsmDb):
         self._filesize = os.path.getsize(self.bz2filename)
         self._filehandler = open(self.bz2filename, 'rb')
         self._bz2_filehead = self._filehandler.read(4)
-        log("file head:", str(self._bz2_filehead))
+        log.debug("file head:", str(self._bz2_filehead))
 
         self._create_index()
         self._bz2reader = Bz2Reader(self._filehandler, self._bz2_filehead, self._filesize)
@@ -497,7 +501,7 @@ class Bz2OsmDb(OsmDb):
         """
         BZ2_COMPRESSED_MAGIC = chr(0x31)+chr(0x41)+chr(0x59)+chr(0x26)+chr(0x53)+chr(0x59)
         READBLOCK_SIZE = 100000000
-        log("Bz2OsmDb: creating index")
+        log.debug("Bz2OsmDb: creating index")
         fin = self._filehandler
         block_nr = 0
         while True:
@@ -515,7 +519,7 @@ class Bz2OsmDb(OsmDb):
             if fin.tell() < block_nr * READBLOCK_SIZE:
                 break
 
-        log("Bz2OsmDb: index complete: %d Blocks" % len(self._index))
+        log.debug("Bz2OsmDb: index complete: %d Blocks" % len(self._index))
 
     def _validate(self, blk):
         """
@@ -544,7 +548,7 @@ class Bz2OsmDb(OsmDb):
         If the filename ends with ".bz2", then the relations will be compressed.
         With filename=/dev/stdout you can get a stream of all realations.
         """
-        log("Bz2OsmDb: writing relations")
+        log.debug("Bz2OsmDb: writing relations")
         OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>\n""" \
                   """<osm version="0.6" generator="Osmosis 0.32">"""
         blk = self._get_block('relation', 0)
@@ -567,7 +571,7 @@ class Bz2OsmDb(OsmDb):
                 break
             fout.write(data)
         fout.close()
-        log("Bz2OsmDb: relation writing complete")
+        log.debug("Bz2OsmDb: relation writing complete")
 
     def write_ways_relations(self, filename):
         """
@@ -575,7 +579,7 @@ class Bz2OsmDb(OsmDb):
         If the filename ends with ".bz2", then the relations will be compressed.
         With filename=/dev/stdout you can get a stream of all realations.
         """
-        log("Bz2OsmDb: writing relations")
+        log.debug("Bz2OsmDb: writing relations")
         OSMHEAD = """<?xml version='1.0' encoding='UTF-8'?>\n""" \
                   """<osm version="0.6" generator="Osmosis 0.32">"""
         blk = self._get_block('way', 0)
@@ -598,7 +602,7 @@ class Bz2OsmDb(OsmDb):
                 break
             fout.write(data)
         fout.close()
-        log("Bz2OsmDb: relation writing complete")
+        log.debug("Bz2OsmDb: relation writing complete")
 
     def get_objects(self, objtype, ids=[]):
         """
@@ -609,7 +613,7 @@ class Bz2OsmDb(OsmDb):
         datalines = []
         lastid = objids[0] - 10000
         for objid in objids:
-            log(objtype, objid)
+            log.debug(objtype, objid)
             if objid > lastid + 1000:
                 blk = self._get_block(objtype, objid)
                 self._bz2reader.changeblock(blk)
@@ -714,14 +718,6 @@ def runserver(port, osmdb):
         print ('^C received, shutting down server')
         server.socket.close()
 
-def log(*args):
-    """ simple helper function for debugging"""
-    if not LOGGING:    
-        return
-    for a in args:
-        print(a, end=" ")
-    print()
-
 def usage():
     print (sys.argv[0] + " Version " + VERSION)
     print ("  -h, --help: print this help information")
@@ -732,7 +728,6 @@ def usage():
     print ("  osmdb.py --relations=out.osm.bz2 germany.osm.bz2")
     print ("  osmdb.py --ways_relations=/dev/stdout planet-latest.osm")
     print ("  osmdb.py --server=8888 germany.osm")
-
 
 #################### MAIN
 if __name__ == '__main__':

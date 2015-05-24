@@ -5,4 +5,5 @@ tests/*.xml
 tests/*.osm
 tests/*.txt
 tests/*.gpx
-tests/testoutput/*
+tests/testoutput/*.*
+tests/osmfiles/result_merge_write.osm

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys, os
-import math, re
+import math, re, numpy
 import bz2
 import logging
 if sys.version_info < (3,0):
@@ -60,7 +60,12 @@ class Bisect(object):
         """
         Setup the Bisect class or reset it to the starting stage.
         """
-        self.increment = 2**int(math.log(self.max - self.min + 1, 2))
+        dif = self.max - self.min + 1
+        print ("diff %s", dif)
+        if (dif<1):
+            dif = 1
+        l = numpy.math.log(dif, 2)
+        self.increment = 2**int(l)
         self.cursor = self.min + self.increment - 1
         self.increment //= 2
         return self.cursor
@@ -86,7 +91,7 @@ class Bisect(object):
         self.cursor -= self.increment
         self.increment //= 2
         return self.cursor
-        
+
     def __str__(self):
         return "Bisect: min=%i, max=%i, cursor=%i, increment=%i" \
                % (self.min, self.max, self.cursor, self.increment)
@@ -140,7 +145,7 @@ class OsmDb(object):
 
         self._filehandler.seek(blk.fileindex)
         while True:
-            line = self._filehandler.readline()
+            line = self._filehandler.readline().decode('UTF-8')
             if line == False: ## EOF or Error
                 return False
             else:
@@ -195,10 +200,10 @@ class OsmDb(object):
     def _checkline(self, line, objtype, objid):
         if re.match('\s*<node id="[0-9]*" .*', line):
             lineid = int(line.split('"')[1])
-            return cmp((self._order['node'],lineid),(self._order[objtype], objid))            
+            return cmp((self._order['node'],lineid),(self._order[objtype], objid))
         elif re.match('\s*<way id="[0-9]*" .*', line):
             lineid = int(line.split('"')[1])
-            return cmp((self._order['way'],lineid),(self._order[objtype], objid))            
+            return cmp((self._order['way'],lineid),(self._order[objtype], objid))
         elif re.match('\s*<relation id="[0-9]*" .*', line):
             lineid = int(line.split('"')[1])
             return cmp((self._order['relation'],lineid),(self._order[objtype], objid))
@@ -207,7 +212,7 @@ class OsmDb(object):
             return cmp((self._order['changeset'],lineid),(self._order[objtype], objid))
         else:
             return -2
-    
+
     def print_index(self):
         """
         debug function to print all index items
@@ -227,7 +232,7 @@ class OsmDb(object):
         self._filehandler.seek(blk.fileindex)
 
         while True:
-            line = self._filehandler.readline()
+            line = self._filehandler.readline().decode('UTF-8')
             if re.match('[ \t]*<relation id="[0-9]*" ', line):
                 break
 
@@ -256,7 +261,7 @@ class OsmDb(object):
         self._filehandler.seek(blk.fileindex)
 
         while True:
-            line = self._filehandler.readline()
+            line = self._filehandler.readline().decode('UTF-8')
             if re.match('[ \t]*<way id="[0-9]*" ', line):
                 break
 
@@ -313,7 +318,7 @@ class OsmDb(object):
             parser = make_parser()
             osm_handler = SubobjectHandler()
             parser.setContentHandler(osm_handler)
-            parseString(OSMHEAD + r_data + OSMTAIL, osm_handler)
+            parseString(bytes(OSMHEAD + r_data + OSMTAIL, 'UTF-8'), osm_handler)
             nodeids |= osm_handler.nodes
             wayids |= osm_handler.ways
             loaded_relationids |= relationids
@@ -347,13 +352,13 @@ class OsmDb(object):
                 self._filehandler.seek(blk.fileindex)
             lastid = objid
             while True:
-                line = self._filehandler.readline()
+                line = self._filehandler.readline().decode('UTF-8')
                 if not line:
                     break
                 ret = self._checkline(line, objtype, objid)
                 if ret == -2:
                     continue
-                elif ret == -1: 
+                elif ret == -1:
                     continue
                 elif ret == 0:
                     datalines.append(line)
@@ -499,7 +504,7 @@ class Bz2OsmDb(OsmDb):
         """
         Create an index for the compressed osm file
         """
-        BZ2_COMPRESSED_MAGIC = chr(0x31)+chr(0x41)+chr(0x59)+chr(0x26)+chr(0x53)+chr(0x59)
+        BZ2_COMPRESSED_MAGIC = bytes(chr(0x31)+chr(0x41)+chr(0x59)+chr(0x26)+chr(0x53)+chr(0x59), 'UTF-8')
         READBLOCK_SIZE = 100000000
         log.debug("Bz2OsmDb: creating index")
         fin = self._filehandler
@@ -619,13 +624,13 @@ class Bz2OsmDb(OsmDb):
                 self._bz2reader.changeblock(blk)
             lastid = objid
             while True:
-                line = self._bz2reader.readline()
+                line = self._bz2reader.readline().decode('UTF-8')
                 if not line:
                     break
                 ret = self._checkline(line, objtype, objid)
                 if ret == -2:
                     continue
-                if ret == -1: 
+                if ret == -1:
                     continue
                 elif ret == 0:
                      datalines.append(line)
@@ -638,7 +643,7 @@ class Bz2OsmDb(OsmDb):
             if line[-2:] == '/>': # object already complete
                 continue
             while True:
-                line = self._bz2reader.readline()
+                line = self._bz2reader.readline().decode('UTF-8')
                 datalines.append(line)
                 if re.match('[ \t]*</%s>' %objtype, line):
                     break
@@ -778,3 +783,7 @@ if __name__ == '__main__':
         elif o in ['--help']:
             usage()
             sys.exit()
+
+## statistic
+def cmp(a, b):
+    return (a > b) - (a < b)

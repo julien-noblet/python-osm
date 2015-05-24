@@ -1,31 +1,37 @@
-python-osm
-  original version by Rory McCann (http://blog.technomancy.org/)
-  modified by Christoph Lupprich (http://www.stopbeingcarbon.com)
-  modified and extended by Werner Hoch (http://www.h-renrew.de)
-	
-== DESCRIPTION
+#python-osm [![Build Status](https://travis-ci.org/julien-noblet/python-osm.svg?branch=master)](https://travis-ci.org/julien-noblet/python-osm)
+
+original version by Rory McCann (http://blog.technomancy.org/)
+
+modified by Christoph Lupprich (http://www.stopbeingcarbon.com)
+
+modified and extended by Werner Hoch (http://www.h-renrew.de)
+
+modified by Julien Noblet (http://julien-noblet.github.io)
+
+
+## DESCRIPTION
 
 python-osm contains tools to read Open Street Map Data (*.osm).
 It is splitted into several python classes:
 
-src/pyosm.py: 
+**src/pyosm.py**:
 base class that contains the datamodel of osm. It parses the osm
 file or data and puts every osm-object into pythonobjects.
 
-src/multipolygon.py:
+**src/multipolygon.py**:
 analyzes a multipolygon relation and provides a node-in-polygon check.
 This class can export a polygon files for osmosis, too.
 
-src/osmdb.py:
+**src/osmdb.py**:
 offers an api to read osm objects from large or large compressed osm files
 like the planet.
 
-tools/relation2gpx.py:
+**tools/relation2gpx.py**:
 Exports one or more relations into a gpx file. This tool can be used to
 create gpx tracks for your gps-unit or to create maps with routes.
 
-tools/osmhistory.py:
+**tools/osmhistory.py**:
 With this tool you can get an old versions of osm-objects at a given
 timestamp. (experimental, use with care)
 
-see also: doc/index.html for more documentation.
+see also: **doc/index.html** for more documentation.

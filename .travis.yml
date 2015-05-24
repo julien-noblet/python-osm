@@ -1,0 +1,19 @@
+# After changing this file, check it on:
+#   http://lint.travis-ci.org/
+language: python
+python:
+  - 2.7
+  - 3.4
+before_install:
+ - sudo apt-get -qq update
+ - mkdir tests/testoutput
+ - echo "${TRAVIS_PYTHON_VERSION}"
+ - sudo apt-get -qq install python-numpy python-scipy python3-numpy python3-scipy
+install:
+ - pip install -q matplotlib;
+ - pip install -q shapely;
+cache: pip
+#install:
+#    make build
+script:
+    python -m unittest

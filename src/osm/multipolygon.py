@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import sys
-import pyosm
-from utils import deg2num, num2deg
+from src.osm import pyosm
+from src.osm.utils import deg2num, num2deg
 import numpy
 
 try:
@@ -38,7 +38,7 @@ class multipolygon(object):
                     sys.stderr.write('Unknown role "%s" of way %i\n' % (role, obj.id))
             elif type(obj) == pyosm.Node:
                 sys.stderr.write('Node obj in role "%s" of node %i\n' % (role, obj.id))
-                    
+
         self.inner_polygons, self.inner_ways = self.create_polygons(inner_ways)
         self.outer_polygons, self.outer_ways = self.create_polygons(outer_ways)
 
@@ -84,7 +84,7 @@ class multipolygon(object):
                     polygons.append(poly_nodes)
                     poly_nodes = []
                     break
-                
+
                 if startway:
                     ways = endnodes.pop(startnode.id)
                     if len(ways) == 1:
@@ -124,7 +124,7 @@ class multipolygon(object):
                         continue
                     else:
                         sys.stderr.write('node with more than 2 ways %s\n' % (stopnode.id))
-                    
+
                 ## no way found to append
                 open_ways.append(poly_nodes)
                 poly_nodes = []
@@ -144,7 +144,7 @@ class multipolygon(object):
 
         while todo_stack:
             current_relation = todo_stack.pop(0)
-            
+
             if current_relation in recursive_relations:
                 raise Exception('recursion loops in relation %i' % self.relation.id)
             recursive_relations.add(current_relation)
@@ -203,7 +203,7 @@ class multipolygon(object):
                 fid.write('\t%s\t%s\n' %(node.lon, node.lat))
             fid.write('END\n')
             n += 1
-            
+
         for ip in self.inner_polygons:
             fid.write('xxx\n')
             fid.write('!%i\n' %(n))
@@ -220,13 +220,13 @@ class multipolygon(object):
         information.
         Load the file in JOSM and update the data.
         Note: Please do not missuse this function to download large areas with josm
-        """ 
+        """
         from shapely.geometry import LineString, Polygon
 
         f_out = open(filename,'w')
         f_out.write("<?xml version='1.0' encoding='UTF-8'?>\n")
         f_out.write("<osm version='0.6' upload='true' generator='JOSM'>\n")
-        
+
         for i, op in enumerate(self.outer_polygons):
             # create coordinate list and then a polygon
             plist = [(node.lat, node.lon) for node in op]
@@ -352,5 +352,3 @@ if __name__ == '__main__':
 
     else:
         mp.status()
-
-    
